@@ -1,10 +1,10 @@
-OBJS=eventlist.o tcppacket.o pipe.o queue.o queue_lossless.o queue_lossless_input.o queue_lossless_output.o ecnqueue.o tcp.o dctcp.o mtcp.o loggers.o logfile.o clock.o config.o network.o qcn.o exoqueue.o randomqueue.o cbr.o cbrpacket.o sent_packets.o ndp.o ndppacket.o eth_pause_packet.o tcp_transfer.o tcp_periodic.o compositequeue.o prioqueue.o cpqueue.o ndp_transfer.o compositeprioqueue.o switch.o dctcp_transfer.o fairpullqueue.o route.o
-HDRS=network.h ndp.h queue_lossless.h queue_lossless_input.h queue_lossless_output.h compositequeue.h prioqueue.h cpqueue.h queue.h loggers.h loggertypes.h pipe.h eventlist.h config.h tcp.h dctcp.h mtcp.h sent_packets.h tcppacket.h ndppacket.h eth_pause_packet.h ndp_transfer.h compositeprioqueue.h ecnqueue.h switch.h dctcp_transfer.h 
+OBJS=eventlist.o tcppacket.o pipe.o queue.o queue_lossless.o queue_lossless_input.o queue_lossless_output.o ecnqueue.o tcp.o dctcp.o mtcp.o loggers.o logfile.o clock.o config.o network.o qcn.o exoqueue.o randomqueue.o cbr.o cbrpacket.o sent_packets.o ndp.o ndppacket.o eth_pause_packet.o tcp_transfer.o tcp_periodic.o compositequeue.o prioqueue.o cpqueue.o ndp_transfer.o compositeprioqueue.o switch.o dctcp_transfer.o fairpullqueue.o route.o ndptunnel.o ndptunnelpacket.o
+HDRS=network.h ndp.h queue_lossless.h queue_lossless_input.h queue_lossless_output.h compositequeue.h prioqueue.h cpqueue.h queue.h loggers.h loggertypes.h pipe.h eventlist.h config.h tcp.h dctcp.h mtcp.h sent_packets.h tcppacket.h ndppacket.h eth_pause_packet.h ndp_transfer.h compositeprioqueue.h ecnqueue.h switch.h dctcp_transfer.h ndptunnel.h ndptunnelpacket.h
 
 CC=g++ 
 CFLAGS= -Wall -g
 
-all:	htsim lib parse_output
+all:	htsim lib parse_output htsim_dumbell_ndptunnel
 
 lib:	$(OBJS) $(HDRS)
 	ar -rvu libhtsim.a $(OBJS)
@@ -48,6 +48,13 @@ cpqueue.o: cpqueue.cpp $(HDRS)
 compositeprioqueue.o: compositeprioqueue.cpp $(HDRS)
 ndp_transfer.o: ndp_transfer.cpp $(HRDS)
 qcn.o: qcn.cpp qcn.h loggers.h config.h 
+
+
+htsim_dumbell_ndptunnel:        $(OBJS) main_dumbell_ndptunnel.o 
+	$(CC) $(CFLAGS) $(OBJS) main_dumbell_ndptunnel.o -o htsim_dumbell_ndptunnel
+
+
+
 
 .cpp.o:
 	source='$<' object='$@' libtool=no depfile='$(DEPDIR)/$*.Po' tmpdepfile='$(DEPDIR)/$*.TPo' $(CXXDEPMODE) $(depcomp) $(CC) $(CFLAGS) -Wuninitialized  -c -o $@ `test -f $< || echo '$(srcdir)/'`$<
