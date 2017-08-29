@@ -245,7 +245,7 @@ int main(int argc, char **argv) {
 
     //conns->setRandom(no_of_conns);
 
-    NdpAckPacer* pacer = new NdpAckPacer(eventlist,  1 /*pull at line rate*/);   
+    NdpPullPacer* pacer = new NdpPullPacer(eventlist,  1 /*pull at line rate*/);   
 
     map<int,vector<int>*>::iterator it;
 

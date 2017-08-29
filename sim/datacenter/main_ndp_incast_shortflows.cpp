@@ -248,8 +248,8 @@ int main(int argc, char **argv) {
 
     //conns->setRandom(no_of_conns);
 
-    NdpAckPacer* pacer = new NdpAckPacer(eventlist,  1 /*pull at line rate*/);   
-    //NdpAckPacer* pacer = new NdpAckPacer(eventlist, "/Users/localadmin/poli/new-datacenter-protocol/data/1500.recv.cdf.pretty");   
+    NdpPullPacer* pacer = new NdpPullPacer(eventlist,  1 /*pull at line rate*/);   
+    //NdpPullPacer* pacer = new NdpPullPacer(eventlist, "/Users/localadmin/poli/new-datacenter-protocol/data/1500.recv.cdf.pretty");   
 
     map<int,vector<int>*>::iterator it;
 

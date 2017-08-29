@@ -97,7 +97,7 @@ NdpSinkTransfer::NdpSinkTransfer(EventList& ev, double pull_rate_modifier) : Ndp
 {
 }
 
-NdpSinkTransfer::NdpSinkTransfer(NdpAckPacer* pace) : NdpSink(pace) 
+NdpSinkTransfer::NdpSinkTransfer(NdpPullPacer* pace) : NdpSink(pace) 
 {
 }
 

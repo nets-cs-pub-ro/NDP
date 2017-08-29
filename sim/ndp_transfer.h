@@ -43,7 +43,7 @@ class NdpSinkTransfer : public NdpSink {
 	friend class NdpSrcTransfer;
 public:
 	NdpSinkTransfer(EventList & ev, double pull_rate_modifier);
-	NdpSinkTransfer(NdpAckPacer* p);
+	NdpSinkTransfer(NdpPullPacer* p);
 	void reset();
 };
 

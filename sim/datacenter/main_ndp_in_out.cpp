@@ -160,7 +160,7 @@ int main(int argc, char **argv) {
 
     NdpSrc* ndpSrc;
     NdpSink* ndpSnk;
-    NdpAckPacer* pacer;   
+    NdpPullPacer* pacer;   
 
     Route* routeout, *routein;
     double extrastarttime;
@@ -275,7 +275,7 @@ int main(int argc, char **argv) {
 		ndpSrc = new NdpSrc(NULL, NULL, eventlist);
 		ndpSrc->setCwnd(cwnd*Packet::data_packet_size());
 		//outcast flows don't share a pacer
-		pacer = new NdpAckPacer(eventlist,  1 /*pull at line rate*/);   
+		pacer = new NdpPullPacer(eventlist,  1 /*pull at line rate*/);   
 		ndpSnk = new NdpSink(pacer);
 	  
 		ndpSrc->setName("ndp_" + ntoa(src) + "_" + ntoa(dest)+"("+ntoa(connection)+")");

@@ -205,11 +205,11 @@ int main(int argc, char **argv) {
 
     int* is_dest = new int[no_of_nodes];
 
-    vector<NdpAckPacer*> pacers;
+    vector<NdpPullPacer*> pacers;
 
     for (int i=0; i<no_of_nodes; i++){
 	is_dest[i] = 0;
-	pacers.push_back(new NdpAckPacer(eventlist, 1));
+	pacers.push_back(new NdpPullPacer(eventlist, 1));
 	net_paths[i] = new vector<const Route*>*[no_of_nodes];
 	for (int j = 0; j<no_of_nodes; j++)
 	    net_paths[i][j] = NULL;

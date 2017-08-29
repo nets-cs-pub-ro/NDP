@@ -249,7 +249,7 @@ int main(int argc, char **argv) {
 
     //conns->setRandom(no_of_conns);
 
-    NdpAckPacer* pacer = new NdpAckPacer(eventlist,  1 /*pull at line rate*/);   
+    NdpPullPacer* pacer = new NdpPullPacer(eventlist,  1 /*pull at line rate*/);   
 
     map<int,vector<int>*>::iterator it;
 
@@ -429,7 +429,7 @@ int main(int argc, char **argv) {
     NdpSrc* longSrc = new NdpSrc(NULL, NULL, eventlist);
     longSrc->setCwnd(cwnd*Packet::data_packet_size());
     //longSrc->set_flowsize(flowsize);
-    NdpAckPacer* longpacer = new NdpAckPacer(eventlist,  1 /*pull at line rate*/);   
+    NdpPullPacer* longpacer = new NdpPullPacer(eventlist,  1 /*pull at line rate*/);   
     NdpSink* longSnk = new NdpSink(longpacer);
     longSrc->setName("long_" + ntoa(long_src_no) + "_" + ntoa(long_dest_no));
     logfile.writeName(*longSrc);

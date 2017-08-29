@@ -240,7 +240,7 @@ int main(int argc, char **argv) {
     //conns->setRandom(no_of_conns);
 
     //outcast flows don't share a pacer
-    //NdpAckPacer* pacer = new NdpAckPacer(eventlist);   
+    //NdpPullPacer* pacer = new NdpPullPacer(eventlist);   
 
     map<int,vector<int>*>::iterator it;
 

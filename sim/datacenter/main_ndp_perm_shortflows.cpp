@@ -258,10 +258,10 @@ int main(int argc, char **argv) {
     NdpSink::setRouteStrategy(route_strategy);
 
 
-    vector<NdpAckPacer*> pacers;
+    vector<NdpPullPacer*> pacers;
 
     for (int i=0;i<no_of_nodes;i++)
-	pacers.push_back(new NdpAckPacer(eventlist, 1));
+	pacers.push_back(new NdpPullPacer(eventlist, 1));
     
     int connID = 0;
     for (it = conns->connections.begin(); it!=conns->connections.end();it++){

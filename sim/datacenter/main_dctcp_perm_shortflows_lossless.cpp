@@ -16,7 +16,6 @@
 #include "clock.h"
 #include "dctcp.h"
 #include "dctcp_transfer.h"
-//#include "mtcp.h"
 #include "compositequeue.h"
 #include "firstfit.h"
 #include "topology.h"
