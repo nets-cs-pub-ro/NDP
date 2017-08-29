@@ -1,4 +1,4 @@
-##NDP Example: Permutation Traffic Matrix
+# NDP Example: Permutation Traffic Matrix
 
 In this example we generate a full permutation traffic matrix: every
 host sends to one other host and every host receives from one other
@@ -9,7 +9,7 @@ example, but illustrates that the network can be run at nearly 100%
 utilization without significant unfairness, even though some hosts
 send to others that are more local than others within the topology.
 
-##Running the Example
+## Running the Example
 
 You'll need python and gnuplot.
 
@@ -20,7 +20,7 @@ You'll need python and gnuplot.
 This is essentially the NDP curve from Figure 14 of the NDP Sigcomm'17
 paper.
 
-##Comments
+## Comments
 
 We're simulating 432 nodes sending at nearly 10Gb/s, so the aggregate
 load is around 4Tb/s, so even with 9KB packets, it takes a few minutes
