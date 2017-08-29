@@ -19,14 +19,12 @@
 #define timeInf 0
 #define NDP_PACKET_SCATTER
 
-//#define NDP_RANDOM_PATH
 //#define LOAD_BALANCED_SCATTER
 
 //min RTO bound in us
 // *** don't change this default - override it by calling NdpSrc::setMinRTO()
 #define DEFAULT_RTO_MIN 5000
 
-//#define MAX_SENT 10000
 #define RECORD_PATH_LENS // used for debugging which paths lengths packets were trimmed on - mostly useful for BCube
 
 enum RouteStrategy {NOT_SET, SINGLE_PATH, SCATTER_PERMUTE, SCATTER_RANDOM, PULL_BASED};
@@ -180,13 +178,13 @@ class NdpSrc : public PacketSink, public EventSource {
     list <NdpPacket*> _rtx_queue; //Packets queued for (hopefuly) imminent retransmission
 };
 
-class NdpAckPacer;
+class NdpPullPacer;
 
 class NdpSink : public PacketSink, public DataReceiver, public Logged {
     friend class NdpSrc;
  public:
     NdpSink(EventList& ev, double pull_rate_modifier);
-    NdpSink(NdpAckPacer* pacer);
+    NdpSink(NdpPullPacer* pacer);
  
 
     uint32_t get_id(){ return id;}
@@ -236,7 +234,7 @@ class NdpSink : public PacketSink, public DataReceiver, public Logged {
 
    string _nodename;
  
-    NdpAckPacer* _pacer;
+    NdpPullPacer* _pacer;
     NdpPull::seq_t _pull_no; // pull sequence number (local to connection)
     NdpPacket::seq_t _last_packet_seqno; //sequence number of the last
                                          //packet in the connection (or 0 if not known)
@@ -261,10 +259,10 @@ class NdpSink : public PacketSink, public DataReceiver, public Logged {
     int _no_of_paths;
 };
 
-class NdpAckPacer : public EventSource {
+class NdpPullPacer : public EventSource {
  public:
-    NdpAckPacer(EventList& ev, double pull_rate_modifier);  
-    NdpAckPacer(EventList& ev, char* fn);  
+    NdpPullPacer(EventList& ev, double pull_rate_modifier);  
+    NdpPullPacer(EventList& ev, char* fn);  
     // pull_rate_modifier is the multiplier of link speed used when
     // determining pull rate.  Generally 1 for FatTree, probable 2 for BCube
     // as there are two distinct paths between each node pair.
@@ -282,7 +280,6 @@ class NdpAckPacer : public EventSource {
 
  private:
     void set_pacerno(Packet *pkt, NdpPull::seq_t pacer_no);
-    //list<Packet*> _waiting_pulls; // pulls that must be sent out.
 //#define FIFO_PULL_QUEUE
 #ifdef FIFO_PULL_QUEUE
     FifoPullQueue<NdpPull> _pull_queue;

@@ -9,17 +9,33 @@
 //  NDP SOURCE
 ////////////////////////////////////////////////////////////////
 
+/* When you're debugging, sometimes it's useful to enable debugging on
+   a single NDP receiver, rather than on all of them.  Set this to the
+   node ID and recompile if you need this; otherwise leave it
+   alone. */
 //#define LOGSINK 2332
 #define LOGSINK 0
-//2310
+
+/* We experimented with adding extra pulls to cope with scenarios
+   where you've got a bad link and pulls get dropped.  Generally you
+   don't want to do this though, so best leave RCV_CWND set to
+   zero. Lost pulls are well handled by the cumulative pull number. */
 //#define RCV_CWND 15
 #define RCV_CWND 0
-//#define USE_PULL_BITMAP
-#define NDP_RANDOM_PATH
 
-uint32_t NdpSrc::_global_rto_count = 0;
 int NdpSrc::_global_node_count = 0;
+/* _rtt_hist is used to build a histogram of RTTs.  The index is in
+   units of microseconds, and RTT is from when a packet is first sent
+   til when it is ACKed, including any retransmissions.  You can read
+   this out after the sim has finished if you care about this. */
 int NdpSrc::_rtt_hist[10000000] = {0};
+
+/* keep track of RTOs.  Generally, we shouldn't see RTOs if
+   return-to-sender is enabled.  Otherwise we'll see them with very
+   large incasts. */
+uint32_t NdpSrc::_global_rto_count = 0;
+
+/* _min_rto can be tuned using SetMinRTO. Don't change it here.  */
 simtime_picosec NdpSrc::_min_rto = timeFromUs((uint32_t)DEFAULT_RTO_MIN);
 
 // You MUST set a route strategy.  The default is to abort without
@@ -32,11 +48,7 @@ NdpSrc::NdpSrc(NdpLogger* logger, TrafficLogger* pktlogger, EventList &eventlist
 {
     _mss = Packet::data_packet_size();
 
-    //if (_mss < 9000)
-    //cerr << "Warning: NDP not using jumbograms!  Maybe call Packet:set_packet_size() ?\n";
-    
     _base_rtt = timeInf;
-
     _acked_packets = 0;
     _packets_sent = 0;
     _new_packets_sent = 0;
@@ -93,8 +105,6 @@ void NdpSrc::log_me() {
 }
 
 void NdpSrc::set_paths(vector<const Route*>* rt_list){
-    //this should only be used with route
-
     int no_of_paths = rt_list->size();
     switch(_route_strategy) {
     case NOT_SET:
@@ -145,7 +155,6 @@ void NdpSrc::startflow(){
     _packets_sent = 0;
     _rtx_timeout_pending = false;
     _rtx_timeout = timeInf;
-    //assert(_pull_window == 0); // should have cancelled out at the end of last transmission
     _pull_window = 0;
     
     _flight_size = 0;
@@ -181,13 +190,6 @@ void NdpSrc::count_feedback(int32_t path_id, FeedbackType fb) {
 	return;
 
     int32_t sz = _paths.size();
-    //cout << "CF: " << fb << " PI: " << path_id << endl;
-    //cout << "F1: ";
-    //for (int i = 0; i < sz; i++) {
-    //cout << " " << _path_acks[i] << "/" << _path_nacks[i];
-    //	cout << "*(" << _avoid_ratio[i] << ")";
-    //}
-    //cout << endl;
     // keep feedback history in a circular buffer
     _feedback_history[_feedback_count] = fb;
     _feedback_count = (_feedback_count + 1) % HIST_LEN;
@@ -234,19 +236,12 @@ void NdpSrc::count_feedback(int32_t path_id, FeedbackType fb) {
 	    _avoid_ratio[path_id]--;
 	_bad_path[path_id] = false;
     }
-    
-    //   cout << "F2: ";
-    //for (int i = 0; i < sz; i++) {
-    //	cout << " " << _path_acks[i] << "/" << _path_nacks[i];
-    //cout << "*(" << _avoid_ratio[i] << ")";
-    //}
-    //cout << endl;
 }
 
 bool NdpSrc::is_bad_path() {
-    // We've just got an RTS.  Either all paths are congested, in
-    // which case the path is not bad, or just this one is.  Look at
-    // the immediate history to tell the difference.
+    // We've just got a return-to-sender.  Either all paths are
+    // congested, in which case the path is not bad, or just this one
+    // is.  Look at the immediate history to tell the difference.
     int bounce_count = 0, ack_count = 0, nack_count = 0, total = 0;
     for (int i=0; i< HIST_LEN; i++) {
 	switch (_feedback_history[i]) {
@@ -264,13 +259,14 @@ bool NdpSrc::is_bad_path() {
 	}
     }
     total = ack_count + nack_count + bounce_count;
-    // If we get an RTS due to incast, all the paths should be very
-    // overloaded. When we're just on the threshold for getting an
-    // RTS, there's a full queue of headers at that switch, and should
-    // be something pretty similar at switches on other paths.  Thus
-    // almost all packets being sent are resulting in NACKs.  If our
-    // history shows at least 25% ACKs, the net is not really
-    // congested on aggregate, so this is likely just a bad path.
+    // If we get a return-to-sender due to incast, all the paths
+    // should be very overloaded. When we're just on the threshold for
+    // getting an RTS, there's a full queue of headers at that switch,
+    // and should be something pretty similar at switches on other
+    // paths.  Thus almost all packets being sent are resulting in
+    // NACKs.  If our history shows at least 25% ACKs, the net is not
+    // really congested on aggregate, so this is likely just a bad
+    // path.
     if (ack_count > 0 && total/ack_count <= 3) {
 	printf("total: %d ack: %d nack:%d rts: %d, BAD\n", total, ack_count, nack_count, bounce_count);
 	return true;
@@ -279,6 +275,7 @@ bool NdpSrc::is_bad_path() {
     return false;
 }
 
+/* Process a return-to-sender packet */
 void NdpSrc::processRTS(NdpPacket& pkt){
     assert(pkt.bounced());
     //printf("Got a bounced packet!\n");
@@ -291,6 +288,15 @@ void NdpSrc::processRTS(NdpPacket& pkt){
     _rtx_queue.push_front(&pkt); 
 
     count_bounce(pkt.route()->path_id());
+
+    /* When we get a return-to-sender packet, we could immediately
+       resend it, but this leads to a larger-than-necessary second
+       incast at the receiver.  So generally the best strategy is to
+       swallow the RTS packet.  There are two exceptions: 1.  It's the
+       only packet left, so the receiver doesn't even know we're
+       trying to send.  2.  The packet was sent on a known-bad path.
+       In this cases we immediately resend.  Comment out the #define
+       below if you want to always resend immediately. */
 #define SWALLOW
 #ifdef SWALLOW
     if ((_pull_window == 0 && _first_window_count <= 1) || is_bad_path()) {
@@ -301,24 +307,26 @@ void NdpSrc::processRTS(NdpPacket& pkt){
 	if (_log_me) {
 	    printf("bounce send pw=%d\n", _pull_window);
 	} else {
-	    printf("bounce send\n");
+	    //printf("bounce send\n");
 	}
     } else {
 	if (_log_me) {
 	    printf("bounce swallow pw=%d\n", _pull_window);
 	} else {
-	    printf("bounce swallow\n");
+	    //printf("bounce swallow\n");
 	}
     }
 #else
     send_packet(0);
-    printf("bounce send\n");
+    //printf("bounce send\n");
 #endif
 }
 
+/* Process a NACK.  Generally this involves queuing the NACKed packet
+   for retransmission, but then waiting for a PULL to actually resend
+   it.  However, sometimes the NACK has the PULL bit set, and then we
+   resend immediately */
 void NdpSrc::processNack(const NdpNack& nack){
-    //send out retransmission; note that this uses a random path, rather than the direct one.
-  
     NdpPacket* p;
 /*
     if (nack.pull())
@@ -328,7 +336,6 @@ void NdpSrc::processNack(const NdpNack& nack){
 */
     
     bool last_packet = (nack.ackno() + _mss - 1) >= _flow_size;
-    //log_rtt(_sent_times[nack.ackno()]);
     _sent_times.erase(nack.ackno());
 
     count_nack(nack.path_id());
@@ -345,6 +352,8 @@ void NdpSrc::processNack(const NdpNack& nack){
     }
 }
 
+/* Process an ACK.  Mostly just housekeeping, but if the ACK also has
+   then PULL bit set, we also send a new packet immediately */
 void NdpSrc::processAck(const NdpAck& ack) {
     NdpAck::seq_t ackno = ack.ackno();
     NdpAck::seq_t pacerno = ack.pacerno();
@@ -371,7 +380,7 @@ void NdpSrc::processAck(const NdpAck& ack) {
 
     count_ack(path_id);
   
-    //compute rtt
+    // Compute rtt.  This comes originally from TCP, and may not be optimal for NDP */
     uint64_t m = eventlist().now()-ts;
 
     if (m!=0){
@@ -400,7 +409,9 @@ void NdpSrc::processAck(const NdpAck& ack) {
 	_rto = _min_rto * ((drand() * 0.5) + 0.75);
 
     if (cum_ackno > _last_acked) { // a brand new ack    
-	// xxx todo: cancel rtx timer for any acked by the cumulative ack
+	// we should probably cancel the rtx timer for any acked by
+	// the cumulative ack, but we'll get an ACK or NACK anyway in
+	// due course.
 	_last_acked = cum_ackno;
 
     }
@@ -414,6 +425,8 @@ void NdpSrc::processAck(const NdpAck& ack) {
     }
 
     update_rtx_time();
+
+    /* if the PULL bit is set, send some new data packets */
     if (pull) {
 	_implicit_pulls++;
 	pull_packets(pullno, pacerno);
@@ -422,31 +435,13 @@ void NdpSrc::processAck(const NdpAck& ack) {
 
 void NdpSrc::receivePacket(Packet& pkt) 
 {
-
     pkt.flow().logTraffic(pkt,*this,TrafficLogger::PKT_RCVDESTROY);
-
 
     switch (pkt.type()) {
     case NDP:
 	{
 	    _bounces_received++;
 	    _first_window_count--;
-#if 0
-	    assert(pkt.bounced());
-	    printf("Got a bounced packet!\n");
-	    pkt.unbounce(ACKSIZE + _mss);
-	    //resend from front of RTX
-	    //queue on any other path than the one we tried last time
-	    _rtx_queue.push_front((NdpPacket*)&pkt); 
-
-	    count_bounce(pkt.route()->path_id());
-	    if (_pull_window == 0) {
-		//Only immediately resend if we're not expecting any
-		//more pulls.  Otherwise wait for a pull.
-		//XXX do we need to cancel RTX timer?
-		send_packet(0);
-	    }
-#endif
 	    processRTS((NdpPacket&)pkt);
 	    return;
 	}
@@ -455,11 +450,11 @@ void NdpSrc::receivePacket(Packet& pkt)
 	    _nacks_received++;
 	    _pull_window++;
 	    _first_window_count--;
-	    /*	    if (_log_me) {
+	    /*if (_log_me) {
 		printf("NACK, pw=%d\n", _pull_window);
 	    } else {
 		printf("NACK\n");
-		}*/
+	    }*/
 	    processNack((const NdpNack&)pkt);
 	    pkt.free();
 	    return;
@@ -474,7 +469,9 @@ void NdpSrc::receivePacket(Packet& pkt)
 	    NdpPull *p = (NdpPull*)(&pkt);
 	    NdpPull::seq_t cum_ackno = p->cumulative_ack();
 	    if (cum_ackno > _last_acked) { // a brand new ack    
-		// xxx todo: cancel rtx timer for any acked by the cumulative ack
+		// we should probably cancel the rtx timer for any acked by
+		// the cumulative ack, but we'll get an ACK or NACK anyway in
+		// due course.
 		_last_acked = cum_ackno;
 	  
 	    }
@@ -497,11 +494,14 @@ void NdpSrc::receivePacket(Packet& pkt)
     }
 }
 
+/* Choose a route for a particular packet */
 const Route* NdpSrc::choose_route() {
     const Route * rt;
     switch(_route_strategy) {
     case PULL_BASED:
     {
+	/* this case is basically SCATTER_PERMUTE, but avoiding bad paths. */
+
 	assert(_paths.size() > 0);
 	if (_paths.size() == 1) {
 	    // special case - no choice
@@ -517,7 +517,6 @@ const Route* NdpSrc::choose_route() {
 	uint32_t path_id = _paths.at(_crt_path)->path_id();
 	_avoid_score[path_id] = _avoid_ratio[path_id];
 	int ctr = 0;
-	//while (_bad_path[path_id] /* && ctr < 2*/) {
 	while (_avoid_score[path_id] > 0 /* && ctr < 2*/) {
 	    printf("as[%d]: %d\n", path_id, _avoid_score[path_id]);
 	    _avoid_score[path_id]--;
@@ -542,7 +541,7 @@ const Route* NdpSrc::choose_route() {
 	_crt_path = random()%_paths.size();
 	break;
     case SCATTER_PERMUTE:
-	//cycle through a permutation
+	//Cycle through a permutation.  Generally gets better load balancing than SCATTER_RANDOM.
 	_crt_path++;
 	assert(_paths.size() > 0);
 	if (_crt_path == _paths.size()) {
@@ -562,7 +561,7 @@ const Route* NdpSrc::choose_route() {
 }
 
 void NdpSrc::pull_packets(NdpPull::seq_t pull_no, NdpPull::seq_t pacer_no) {
-    // pull number is cumulative both to allow for lost pulls and to
+    // Pull number is cumulative both to allow for lost pulls and to
     // reduce reverse-path RTT - if one pull is delayed on one path, a
     // pull that gets there faster on another path can supercede it
     while (_last_pull < pull_no) {
@@ -600,7 +599,6 @@ void NdpSrc::send_packet(NdpPull::seq_t pacer_no) {
 	//feeder queue isn't a FIFO but that would be hard to
 	//implement in a real system, so this is a rough proxy.
 	uint32_t service_time = q->serviceTime(*p);  
-	//cout << "service_time: " << service_time << endl;
 	_sent_times[p->seqno()] = eventlist().now() + service_time;
 	_packets_sent ++;
 	_rtx_packets_sent++;
@@ -685,7 +683,6 @@ void NdpSrc::permute_paths() {
 	const Route* tmppath = _paths[ix];
 	_paths[ix] = _paths[len-1-i];
 	_paths[len-1-i] = tmppath;
-	//cout << "swapping " << ix << " and " << len-1-i << endl;
     }
 }
 
@@ -701,21 +698,12 @@ NdpSrc::update_rtx_time() {
     int c = 0;
     for (i = _sent_times.begin(); i != _sent_times.end(); i++) {
 	simtime_picosec sent = i->second;
-	//cout << "id: " << get_id() << ", " << c << " sent: " << sent << " now: " << now << " sent+rto: " << sent + _rto  << endl;
-	//if (sent + _rto < now) {
-	//    cout << "Problem!\n";
-	//    cout << flush;
-	//}
-	//assert(sent + _rto > now);
 	if (sent < first_senttime || first_senttime == timeInf) {
 	    first_senttime = sent;
 	}
 	c++;
-	//cout << "first: " << first_senttime << endl;
     }
     _rtx_timeout = first_senttime + _rto;
-    //cout << "rtx_to: " << _rtx_timeout << " now: " << now << endl << flush;
-    //assert(_rtx_timeout >= now);
 }
  
 void 
@@ -726,7 +714,6 @@ NdpSrc::process_cumulative_ack(NdpPacket::seq_t cum_ackno) {
 	if (i->first <= cum_ackno) {
 	    i_next = i; //juggling to keep i valid
 	    i_next++;
-	    //log_rtt(_sent_times[i->first]);
 	    _sent_times.erase(i);
 	    i = i_next;
 	} else {
@@ -738,7 +725,7 @@ NdpSrc::process_cumulative_ack(NdpPacket::seq_t cum_ackno) {
 
 void 
 NdpSrc::retransmit_packet() {
-    cout << "starting retransmit_packet\n";
+    //cout << "starting retransmit_packet\n";
     NdpPacket* p;
     map<NdpPacket::seq_t, simtime_picosec>::iterator i, i_next;
     i = _sent_times.begin();
@@ -747,7 +734,7 @@ NdpSrc::retransmit_packet() {
     // removing from _sent_times and the iterator gets confused
     while (i != _sent_times.end()) {
 	if (i->second + _rto <= eventlist().now()) {
-	    cout << "_sent_time: " << timeAsUs(i->second) << "us rto " << timeAsUs(_rto) << "us now " << timeAsUs(eventlist().now()) << "us\n";
+	    //cout << "_sent_time: " << timeAsUs(i->second) << "us rto " << timeAsUs(_rto) << "us now " << timeAsUs(eventlist().now()) << "us\n";
 	    //this one is due for retransmission
 	    rtx_list.push_back(i->first);
 	    i_next = i; //we're about to invalidate i when we call erase
@@ -798,7 +785,6 @@ NdpSrc::retransmit_packet() {
 	// 	}
 	_global_rto_count++;
 	cout << "Total RTOs: " << _global_rto_count << endl;
-	//_rtx_queue.push_back(p);
 	_path_counts_rto[p->path_id()]++;
 	p->sendOn();
 	_packets_sent++;
@@ -809,7 +795,9 @@ NdpSrc::retransmit_packet() {
 
 void NdpSrc::rtx_timer_hook(simtime_picosec now, simtime_picosec period) {
 #ifndef RESEND_ON_TIMEOUT
-    return;  // if we're using RTS, we shouldn't need to also use timeouts
+    return;  // if we're using RTS, we shouldn't need to also use
+	     // timeouts, at least in simulation where we don't see
+	     // corrupted packets
 #endif
 
     if (_highest_sent == 0) return;
@@ -879,12 +867,13 @@ void NdpSrc::print_stats() {
 //  NDP SINK
 ////////////////////////////////////////////////////////////////
 
+/* Only use this constructor when there is only one for to this receiver */
 NdpSink::NdpSink(EventList& event, double pull_rate_modifier)
     : Logged("ndp_sink"),_cumulative_ack(0) , _total_received(0) 
 {
     _src = 0;
-    _pacer = new NdpAckPacer(event, pull_rate_modifier);
-    //_pacer = new NdpAckPacer(event, "/Users/localadmin/poli/new-datacenter-protocol/data/1500.recv.cdf.pretty");
+    _pacer = new NdpPullPacer(event, pull_rate_modifier);
+    //_pacer = new NdpPullPacer(event, "/Users/localadmin/poli/new-datacenter-protocol/data/1500.recv.cdf.pretty");
     
     _nodename = "ndpsink";
     _pull_no = 0;
@@ -903,7 +892,10 @@ NdpSink::NdpSink(EventList& event, double pull_rate_modifier)
 #endif
 }
 
-NdpSink::NdpSink(NdpAckPacer* pacer) : Logged("ndp_sink"),_cumulative_ack(0) , _total_received(0) 
+/* Use this constructor when there are multiple flows to one receiver
+   - all the flows to one receiver need to share the same
+   NdpPullPacer */
+NdpSink::NdpSink(NdpPullPacer* pacer) : Logged("ndp_sink"),_cumulative_ack(0) , _total_received(0) 
 {
     _src = 0;
     _pacer = pacer;
@@ -936,6 +928,9 @@ void NdpSink::log_me() {
     
 }
 
+/* Connect a src to this sink.  We normally won't use this route if
+   we're sending across multiple paths - call set_paths() after
+   connect to configure the set of paths to be used. */
 void NdpSink::connect(NdpSrc& src, Route& route)
 {
     _src = &src;
@@ -961,6 +956,7 @@ void NdpSink::connect(NdpSrc& src, Route& route)
     }
 }
 
+/* sets the set of paths to be used when sending from this NdpSink back to the NdpSrc */
 void NdpSink::set_paths(vector<const Route*>* rt_list){
     switch (_route_strategy) {
     case SCATTER_PERMUTE:
@@ -982,6 +978,7 @@ void NdpSink::set_paths(vector<const Route*>* rt_list){
     }
 }
 
+// Receive a packet.
 // Note: _cumulative_ack is the last byte we've ACKed.
 // seqno is the first byte of the new packet.
 void NdpSink::receivePacket(Packet& pkt) {
@@ -1006,7 +1003,7 @@ void NdpSink::receivePacket(Packet& pkt) {
     case NDPACK:
     case NDPNACK:
     case NDPPULL:
-	// is there anything we should do here?  
+	// Is there anything we should do here?  Generally won't happen unless the topolgy is very asymmetric.
 	assert(pkt.bounced());
 	cerr << "Got bounced feedback packet!\n";
 	p->free();
@@ -1077,9 +1074,11 @@ void NdpSink::receivePacket(Packet& pkt) {
     }
 }
 
+/* _path_history was an experiment with allowing the receiver to tell
+   the sender which path to use for the next data packet.  It's no
+   longer used for that, but might still be useful for debugging */
 void NdpSink::update_path_history(const NdpPacket& p) {
     assert(p.path_id() >= 0 && p.path_id() < 10000);
-    //printf("Receive: path: %d, count: %d\n", p.path_id(), p.no_of_paths());
     if (_path_hist_index == -1) {
 	//first received packet.
 	_no_of_paths = p.no_of_paths();
@@ -1175,15 +1174,18 @@ void NdpSink::permute_paths() {
 	const Route* tmppath = _paths[ix];
 	_paths[ix] = _paths[len-1-i];
 	_paths[len-1-i] = tmppath;
-	//cout << "swapping " << ix << " and " << len-1-i << endl;
     }
 }
 
 
-double* NdpAckPacer::_pull_spacing_cdf = NULL;
-int NdpAckPacer::_pull_spacing_cdf_count = 0;
+double* NdpPullPacer::_pull_spacing_cdf = NULL;
+int NdpPullPacer::_pull_spacing_cdf_count = 0;
 
-NdpAckPacer::NdpAckPacer(EventList& event, double pull_rate_modifier)  : 
+
+/* Every NdpSink needs an NdpPullPacer to pace out it's PULL packets.
+   Multiple incoming flows at the same receiving node much share a
+   single pacer */
+NdpPullPacer::NdpPullPacer(EventList& event, double pull_rate_modifier)  : 
     EventSource(event, "ndp_pacer"), _last_pull(0)
 {
     _packet_drain_time = (simtime_picosec)(Packet::data_packet_size() * (pow(10.0,12.0) * 8) / speedFromMbps((uint64_t)10000))/pull_rate_modifier;
@@ -1191,7 +1193,7 @@ NdpAckPacer::NdpAckPacer(EventList& event, double pull_rate_modifier)  :
     _pacer_no = 0;
 }
 
-NdpAckPacer::NdpAckPacer(EventList& event, char* filename)  : 
+NdpPullPacer::NdpPullPacer(EventList& event, char* filename)  : 
     EventSource(event, "ndp_pacer"), _last_pull(0)
 {
     int t;
@@ -1214,7 +1216,7 @@ NdpAckPacer::NdpAckPacer(EventList& event, char* filename)  :
     _pacer_no = 0;
 }
 
-void NdpAckPacer::log_me() {
+void NdpPullPacer::log_me() {
     // avoid looping
     if (_log_me == true)
 	return;
@@ -1224,7 +1226,7 @@ void NdpAckPacer::log_me() {
     _excess_count = 0;
 }
 
-void NdpAckPacer::set_pacerno(Packet *pkt, NdpPull::seq_t pacer_no) {
+void NdpPullPacer::set_pacerno(Packet *pkt, NdpPull::seq_t pacer_no) {
     if (pkt->type() == NDPACK) {
 	((NdpAck*)pkt)->set_pacerno(pacer_no);
     } else if (pkt->type() == NDPNACK) {
@@ -1236,7 +1238,7 @@ void NdpAckPacer::set_pacerno(Packet *pkt, NdpPull::seq_t pacer_no) {
     }
 }
 
-void NdpAckPacer::sendPacket(Packet* ack, NdpPacket::seq_t rcvd_pacer_no, NdpSink* receiver) {
+void NdpPullPacer::sendPacket(Packet* ack, NdpPacket::seq_t rcvd_pacer_no, NdpSink* receiver) {
     /*
     if (_log_me) {
 	cout << "pacerno diff: " << _pacer_no - rcvd_pacer_no << endl;
@@ -1341,12 +1343,12 @@ void NdpAckPacer::sendPacket(Packet* ack, NdpPacket::seq_t rcvd_pacer_no, NdpSin
 // generate any more data packets.  This will move the nacks up the
 // queue too, causing any retransmitted packets from the tail of the
 // file to be received earlier
-void NdpAckPacer::release_pulls(uint32_t flow_id) {
+void NdpPullPacer::release_pulls(uint32_t flow_id) {
     _pull_queue.flush_flow(flow_id);
 }
 
 
-void NdpAckPacer::doNextEvent(){
+void NdpPullPacer::doNextEvent(){
     if (_pull_queue.empty()) {
 	// this can happen if we released all the acks at the end of
 	// the connection.  we didn't cancel the timer, so we end up
