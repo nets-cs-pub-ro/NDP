@@ -65,5 +65,9 @@ for i in lasttimes:
 print(conns, total/numflows, file=ofile);
 print(conns, total/numflows);
 ofile.close()
+ofile = open(namebase + "all", "a+")
+print(conns, lasttimes[0], lasttimes[numflows/2], lasttimes[numflows-1], file=ofile);
+print(conns, lasttimes[0], lasttimes[numflows/2], lasttimes[numflows-1]);
+ofile.close()
 
     
