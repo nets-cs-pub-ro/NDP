@@ -29,8 +29,8 @@ Many packets arrive simultaneously, and even with small incasts, many
 packets will be trimmed.  With larger incasts we also see the
 behaviour when the header queue overflows - in this simulation,
 return-to-sender is enabled.  The behaviour is not greatly different
-if these packets are dropped and the sender resends based on timeouts
-- there are enough headers already queued that performance does not
+if these packets are dropped and the sender resends based on timeouts - 
+there are enough headers already queued that performance does not
 drop significantly if we rely on timeouts rather than
 return-to-sender.
 
