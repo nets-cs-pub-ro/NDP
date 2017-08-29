@@ -1,0 +1,1 @@
+This folder contains various implementations of the NDP Packet Trimming Switch.
