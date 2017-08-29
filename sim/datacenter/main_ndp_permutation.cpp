@@ -427,7 +427,7 @@ int main(int argc, char **argv) {
     logfile.write("# rtt =" + ntoa(rtt));
 
     // enable logging on the first source - for debugging purposes
-    (*(ndp_srcs.begin()))->log_me();
+    //(*(ndp_srcs.begin()))->log_me();
 
     // GO!
     while (eventlist.doNextEvent()) {

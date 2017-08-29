@@ -233,9 +233,6 @@ int main(int argc, char** argv){
 	    case Logger::NDP_SINK: //18
 		cout << NdpSinkLoggerSampling::event_to_str(event) << endl;
 		break;
-	    case Logger::NDPLITE_TRAFFIC: //20
-		cout << NdpLiteTrafficLogger::event_to_str(event) << endl;
-		break;
 	    }
 	} else {
 	    if ((typeRec[i]==(uint32_t)TYPE || TYPE==-1) 
