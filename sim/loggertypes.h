@@ -35,7 +35,7 @@ class Logger {
 		     TCP_TRAFFIC=9, NDP_TRAFFIC=10, 
 		     TCP_SINK = 11, MTCP = 12, ENERGY = 13, 
 		     TCP_MEMORY = 14, NDP_EVENT=15, NDP_STATE=16, NDP_RECORD=17, 
-		     NDP_SINK = 18, NDP_MEMORY = 19, NDPLITE_TRAFFIC=20};
+		     NDP_SINK = 18, NDP_MEMORY = 19};
     static string event_to_str(RawLogEvent& event);
     Logger() {};
     virtual ~Logger(){};

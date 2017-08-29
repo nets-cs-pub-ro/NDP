@@ -4,7 +4,7 @@ HDRS=network.h ndp.h queue_lossless.h queue_lossless_input.h queue_lossless_outp
 CC=g++ 
 CFLAGS= -Wall -g
 
-all:	htsim lib 
+all:	htsim lib parse_output
 
 lib:	$(OBJS) $(HDRS)
 	ar -rvu libhtsim.a $(OBJS)
