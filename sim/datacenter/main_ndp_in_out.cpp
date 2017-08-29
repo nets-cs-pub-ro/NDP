@@ -144,7 +144,6 @@ int main(int argc, char **argv) {
 #endif
 
 
-    int tot_subs = 0;
     int cnt_con = 0;
 
     lg = &logfile;

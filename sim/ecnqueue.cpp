@@ -8,8 +8,7 @@
 ECNQueue::ECNQueue(linkspeed_bps bitrate, mem_b maxsize, 
 			 EventList& eventlist, QueueLogger* logger, mem_b  K)
     : Queue(bitrate,maxsize,eventlist,logger), 
-      _K(K),
-      _buffer_drops(0)
+      _K(K)
 {
     _state_send = LosslessQueue::READY;
 }

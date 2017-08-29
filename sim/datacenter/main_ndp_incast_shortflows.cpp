@@ -403,29 +403,12 @@ int main(int argc, char **argv) {
 		ndpSrc->set_paths(net_paths[src][dest]);
 		ndpSnk->set_paths(net_paths[dest][src]);
 
-		//cout << "Using PACKET SCATTER!!!!"<<endl;
-		vector<const Route*>* rts = net_paths[src][dest];
-		const Route* rt = rts->at(0);
-		PacketSink* first_queue = rt->at(0);
-		//cout << "First hop: " << first_queue->nodename() << endl;
-		//QueueLoggerSimple queue_logger = QueueLoggerSimple();
-		//logfile.addLogger(queue_logger);
-		//if (ndpSnk->_log_me)
-		//((Queue*)first_queue)->setLogger(&queue_logger);
-		//if (ndpSnk->_log_me)
-		    ndpSrc->set_traffic_logger(&traffic_logger);
+	        ndpSrc->set_traffic_logger(&traffic_logger);
 #endif
 
-	  
-		//	  if (ff)
-		//	    ff->add_flow(src,dest,ndpSrc);
-	  
-		//sinkLogger.monitorSink(ndpSnk);
 	    }
 	}
     }
-    //    ShortFlows* sf = new ShortFlows(2560, eventlist, net_paths,conns,lg, &ndpRtxScanner);
-
     cout << "Mean number of subflows " << ntoa((double)tot_subs/cnt_con)<<endl;
 
     // Record the setup
@@ -434,7 +417,6 @@ int main(int argc, char **argv) {
     logfile.write("# subflows=" + ntoa(subflow_count));
     logfile.write("# hostnicrate = " + ntoa(HOST_NIC) + " pkt/sec");
     logfile.write("# corelinkrate = " + ntoa(HOST_NIC*CORE_TO_HOST) + " pkt/sec");
-    //logfile.write("# buffer = " + ntoa((double) (queues_na_ni[0][1]->_maxsize) / ((double) pktsize)) + " pkt");
     double rtt = timeAsSec(timeFromUs(RTT));
     logfile.write("# rtt =" + ntoa(rtt));
 
@@ -449,7 +431,6 @@ int main(int argc, char **argv) {
 	counts[i] = 0;
     for (rt_i = routes.begin(); rt_i != routes.end(); rt_i++) {
 	const Route* r = (*rt_i);
-	//print_route(*r);
 #ifdef PRINTPATHS
 	cout << "Path:" << endl;
 #endif
@@ -477,22 +458,6 @@ int main(int argc, char **argv) {
     }
     for (int i = 0; i < 10; i++)
 	cout << "Hop " << i << " Count " << counts[i] << endl;
-    /*uint64_t total_rtt = 0;
-    cout << "RTT Histogram";
-    for (int i = 0; i < 100000; i++) {
-	if (NdpSrc::_rtt_hist[i]!= 0) {
-	    cout << i << " " << NdpSrc::_rtt_hist[i] << endl;
-	    total_rtt += NdpSrc::_rtt_hist[i];
-	}
-    }
-    cout << "RTT CDF";
-    uint64_t cum_rtt = 0;
-    for (int i = 0; i < 100000; i++) {
-	if (NdpSrc::_rtt_hist[i]!= 0) {
-	    cum_rtt += NdpSrc::_rtt_hist[i];
-	    cout << i << " " << double(cum_rtt)/double(total_rtt) << endl;
-	}
-	}*/
 }
 
 string ntoa(double n) {

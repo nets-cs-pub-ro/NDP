@@ -18,10 +18,8 @@ class ECNQueue : public Queue {
 		QueueLogger* logger, mem_b drop);
     void receivePacket(Packet & pkt);
     void completeService();
-    // should really be private, but loggers want to see
  private:
     mem_b _K;
-    int _buffer_drops;
     int _state_send;
 };
 

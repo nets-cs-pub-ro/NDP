@@ -16,7 +16,7 @@
 #include "clock.h"
 #include "dctcp.h"
 #include "dctcp_transfer.h"
-#include "mtcp.h"
+//#include "mtcp.h"
 #include "compositequeue.h"
 #include "firstfit.h"
 #include "topology.h"
@@ -270,8 +270,6 @@ int main(int argc, char **argv) {
 		vector<const Route*>* paths = top->get_paths(dest,src);
 		net_paths[dest][src] = paths;
 	    }
-
-	    MultipathTcpSrc* mtcp;
 
 	    for (int connection=0;connection<1;connection++){
 		cnt_con ++;

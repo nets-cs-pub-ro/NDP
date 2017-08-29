@@ -264,8 +264,6 @@ int main(int argc, char **argv) {
 		net_paths[dest][src] = paths;
 	    }
 
-	    MultipathTcpSrc* mtcp;
-
 	    for (int connection=0;connection<1;connection++){
 		cnt_con ++;
 		

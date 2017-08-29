@@ -495,8 +495,9 @@ int main(int argc, char **argv) {
     for (src_i = ndp_srcs.begin(); src_i != ndp_srcs.end(); src_i++) {
 	(*src_i)->print_stats();
     }
+    /*
     uint64_t total_rtt = 0;
-    /*    cout << "RTT Histogram";
+    cout << "RTT Histogram";
     for (int i = 0; i < 100000; i++) {
 	if (NdpSrc::_rtt_hist[i]!= 0) {
 	    cout << i << " " << NdpSrc::_rtt_hist[i] << endl;
@@ -510,8 +511,8 @@ int main(int argc, char **argv) {
 	    cum_rtt += NdpSrc::_rtt_hist[i];
 	    cout << i << " " << double(cum_rtt)/double(total_rtt) << endl;
 	}
-	}*/
-    
+    }
+    */
 
 }
 

@@ -402,8 +402,9 @@ int main(int argc, char **argv) {
 
     cout << "Done" << endl;
     list <const Route*>::iterator rt_i;
+    /*
     int stripped[10],bounced[10],counts[10]; int hop;
-    /*for (rt_i = routes.begin(); rt_i != routes.end(); rt_i++) {
+    for (rt_i = routes.begin(); rt_i != routes.end(); rt_i++) {
 	const Route* r = (*rt_i);
 	//print_route(*r);
 	cout << "Path:" << endl;
@@ -419,16 +420,19 @@ int main(int argc, char **argv) {
 	    }
 	} 
 	cout << endl;
-	}*/
+    }
+    */
 
     
-    /*list <NdpSrc*>::iterator src_i;
+    /*
+    list <NdpSrc*>::iterator src_i;
     for (src_i = ndp_srcs.begin(); src_i != ndp_srcs.end(); src_i++) {
 	cout << "Src, sent: " << (*src_i)->_packets_sent << "[new: " << (*src_i)->_new_packets_sent << " rtx: " << (*src_i)->_rtx_packets_sent << "] nacks: " << (*src_i)->_nacks_received << " pulls: " << (*src_i)->_pulls_received << " paths: " << (*src_i)->_paths.size() << endl;
     }
     for (src_i = ndp_srcs.begin(); src_i != ndp_srcs.end(); src_i++) {
 	(*src_i)->print_stats();
-	}*/
+    }
+    */
 }
 
 string ntoa(double n) {

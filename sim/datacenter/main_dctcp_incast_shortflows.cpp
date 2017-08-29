@@ -56,7 +56,8 @@ EventList eventlist;
 Logfile* lg;
 
 void exit_error(char* progr) {
-    cout << "Usage " << progr << " [UNCOUPLED(DEFAULT)|COUPLED_INC|FULLY_COUPLED|COUPLED_EPSILON] [epsilon][COUPLED_SCALABLE_TCP" << endl;
+    //    cout << "Usage " << progr << " [UNCOUPLED(DEFAULT)|COUPLED_INC|FULLY_COUPLED|COUPLED_EPSILON] [epsilon][COUPLED_SCALABLE_TCP" << endl;
+    cout << "Usage: read source code for flags" << endl;
     exit(1);
 }
 
@@ -85,7 +86,6 @@ int main(int argc, char **argv) {
     Packet::set_packet_size(9000);
     eventlist.setEndtime(timeFromSec(2));
     Clock c(timeFromSec(5 / 100.), eventlist);
-    double epsilon = 1;
     int no_of_conns = 0, no_of_nodes = DEFAULT_NODES, cwnd = 15,
 	flowsize=Packet::data_packet_size()*50;
     stringstream filename(ios_base::out);

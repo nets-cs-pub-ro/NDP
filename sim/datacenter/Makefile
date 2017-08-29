@@ -260,4 +260,4 @@ multihomed_fat_tree_topology.o: multihomed_fat_tree_topology.cpp multihomed_fat_
 	$(CC) $(INCLUDE) $(CFLAGS) -c multihomed_fat_tree_topology.cpp
 
 clean:	
-	rm *.o htsim_ndp* htsim_tcp* htsim_dctcp*
+	rm -f *.o htsim_ndp* htsim_tcp* htsim_dctcp*
