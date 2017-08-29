@@ -23,7 +23,7 @@ paper.
 ## Comments
 
 We're simulating 432 nodes sending at nearly 10Gb/s, so the aggregate
-load is around 4Tb/s, so even with 9KB packets, it takes a few minutes
+load is around 4Tb/s.  Even with 9KB packets, it takes a few minutes
 to run.  Queue sizes are 8 packets, and we use a 23 packet initial
 window.  23 packets is quite a large IW for NDP, but with full
 bidirectional traffic, we get small queues all over, and even PULLs
