@@ -56,8 +56,7 @@ EventList eventlist;
 Logfile* lg;
 
 void exit_error(char* progr) {
-    //    cout << "Usage " << progr << " [UNCOUPLED(DEFAULT)|COUPLED_INC|FULLY_COUPLED|COUPLED_EPSILON] [epsilon][COUPLED_SCALABLE_TCP" << endl;
-    cout << "Usage: read source code for flags" << endl;
+    cout << "Usage " << progr << " See source file for available flags." << endl;
     exit(1);
 }
 
