@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string.h>
 #include <math.h>
+#include <list>
 #include "network.h"
 #include "randomqueue.h"
 //#include "subflow_control.h"
@@ -255,6 +256,7 @@ int main(int argc, char **argv) {
 
     // used just to print out stats data at the end
     list <const Route*> routes;
+    list <NdpSrc*> srcs;
     
     int connID = 0;
     for (it = conns->connections.begin(); it!=conns->connections.end();it++){
@@ -295,6 +297,7 @@ int main(int argc, char **argv) {
 		//it_sub = 1;
 	  
 		ndpSrc = new NdpSrc(NULL, NULL, eventlist);
+		srcs.push_back(ndpSrc);
 		ndpSrc->setCwnd(cwnd*Packet::data_packet_size());
 		ndpSrc->set_flowsize(flowsize);
 		ndpSnk = new NdpSink(pacer);
@@ -458,6 +461,20 @@ int main(int argc, char **argv) {
     }
     for (int i = 0; i < 10; i++)
 	cout << "Hop " << i << " Count " << counts[i] << endl;
+    list<NdpSrc*>::iterator src_i;
+    int src_count=0, total_new=0, total_acked=0, total_nacked=0, total_bounced=0, total_rtx=0;
+    for (src_i = srcs.begin(); src_i != srcs.end(); src_i++) {
+	NdpSrc* s = (*src_i);
+	src_count++;
+	total_new += s->_new_packets_sent;
+	total_acked += s->_acks_received;
+	total_nacked += s->_nacks_received;
+	total_bounced += s->_bounces_received;
+	total_rtx += s->_rtx_packets_sent;
+    }
+    cout << "Srcs: " << src_count << " New: " << total_new << " Acks: " << total_acked
+	 << " Nacks: " << total_nacked << " Bounced: " << total_bounced
+	 << " RTX: " << total_bounced << endl;
 }
 
 string ntoa(double n) {
