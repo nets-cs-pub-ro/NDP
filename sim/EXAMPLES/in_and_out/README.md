@@ -9,6 +9,8 @@ is to verify how host F's traffic affects host A's traffic. The
 initial window of all flows is 23 packets and switch queues are 8
 packets.  
 
+![Experiment Topology](topo.png)
+
 ## Running the Example
 
 You'll need python and gnuplot.
@@ -30,13 +32,13 @@ The data rates achieved are:
 * F->E: 7.55208
 
 Traffic from A to B, C, D an E will start out fair, simply because the
-initial windows are the same.  Each receiver will get less than it's
+initial windows are the same.  Each receiver will get less than its
 link speed in incoming packets, so all incoming packets elicit
 immediate pulls for more data.
 
 The link to E is initially overloaded, resulting in trimming.  As a
 result, a pull queue builds at E.  Roughly four times more pull
-packets from F that from A are queued at E.  The pull queue uses a
+packets from F than from A are queued at E.  The pull queue uses a
 round-robin fair queue by default, so pulls are preferentially sent to
 A, with the remainder sent to F.
 
