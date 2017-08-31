@@ -9,7 +9,7 @@ is to verify how host F's traffic affects host A's traffic. The
 initial window of all flows is 23 packets and switch queues are 8
 packets.  
 
-![Experiment Topology](topo.png)
+![Experiment Topology](topology.png)
 
 ## Running the Example
 
