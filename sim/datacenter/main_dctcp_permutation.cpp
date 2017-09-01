@@ -36,9 +36,9 @@
 #define PERIODIC 0
 #include "main.h"
 
-//int RTT = 10; // this is per link delay; identical RTT microseconds = 0.02 ms
 uint32_t RTT = 1; // this is per link delay in us; identical RTT microseconds = 0.02 ms
 int DEFAULT_NODES = 128;
+#define DEFAULT_QUEUE_SIZE 8
 
 FirstFit* ff = NULL;
 unsigned int subflow_count = 8;
@@ -46,7 +46,6 @@ unsigned int subflow_count = 8;
 string ntoa(double n);
 string itoa(uint64_t n);
 
-//#define SWITCH_BUFFER (SERVICE * RTT / 1000)
 #define USE_FIRST_FIT 0
 #define FIRST_FIT_INTERVAL 100
 
@@ -55,7 +54,7 @@ EventList eventlist;
 Logfile* lg;
 
 void exit_error(char* progr) {
-    cout << "Usage " << progr << " [UNCOUPLED(DEFAULT)|COUPLED_INC|FULLY_COUPLED|COUPLED_EPSILON] [epsilon][COUPLED_SCALABLE_TCP" << endl;
+    cout << "Usage " << progr << " (see src code for paramaters)" << endl;
     exit(1);
 }
 
@@ -72,12 +71,11 @@ void print_path(std::ofstream &paths, const Route* rt){
 }
 
 int main(int argc, char **argv) {
-    Packet::set_packet_size(9000);
+    TcpPacket::set_packet_size(9000);
     eventlist.setEndtime(timeFromSec(2.01));
     Clock c(timeFromSec(5 / 100.), eventlist);
-    int algo = COUPLED_EPSILON;
-    double epsilon = 1;
-    int no_of_conns = 0, no_of_nodes = DEFAULT_NODES, cwnd = 15;
+    int no_of_conns = DEFAULT_NODES, no_of_nodes = DEFAULT_NODES, ssthresh = 15;
+    mem_b queuesize = memFromPkt(DEFAULT_QUEUE_SIZE);
     stringstream filename(ios_base::out);
 
     int i = 1;
@@ -99,27 +97,13 @@ int main(int argc, char **argv) {
 	    no_of_nodes = atoi(argv[i+1]);
 	    cout << "no_of_nodes "<<no_of_nodes << endl;
 	    i++;
-	} else if (!strcmp(argv[i],"-cwnd")){
-	    cwnd = atoi(argv[i+1]);
-	    cout << "cwnd "<< cwnd << endl;
+	} else if (!strcmp(argv[i],"-ssthresh")){
+	    ssthresh = atoi(argv[i+1]);
+	    cout << "ssthresh "<< ssthresh << endl;
 	    i++;
-	} else if (!strcmp(argv[i], "UNCOUPLED"))
-	    algo = UNCOUPLED;
-	else if (!strcmp(argv[i], "COUPLED_INC"))
-	    algo = COUPLED_INC;
-	else if (!strcmp(argv[i], "FULLY_COUPLED"))
-	    algo = FULLY_COUPLED;
-	else if (!strcmp(argv[i], "COUPLED_TCP"))
-	    algo = COUPLED_TCP;
-	else if (!strcmp(argv[i], "COUPLED_SCALABLE_TCP"))
-	    algo = COUPLED_SCALABLE_TCP;
-	else if (!strcmp(argv[i], "COUPLED_EPSILON")) {
-	    algo = COUPLED_EPSILON;
-	    if (argc > i+1){
-		epsilon = atof(argv[i+1]);
-		i++;
-	    }
-	    printf("Using epsilon %f\n", epsilon);
+	} else if (!strcmp(argv[i],"-q")){
+	    queuesize = memFromPkt(atoi(argv[i+1]));
+	    i++;
 	} else
 	    exit_error(argv[0]);
 
@@ -129,9 +113,6 @@ int main(int argc, char **argv) {
       
     cout << "Using subflow count " << subflow_count <<endl;
       
-    cout <<  "Using algo="<<algo<< " epsilon=" << epsilon << endl;
-    // prepare the loggers
-
     cout << "Logging to " << filename.str() << endl;
     //Logfile 
     Logfile logfile(filename.str(), eventlist);
@@ -158,7 +139,7 @@ int main(int argc, char **argv) {
     logfile.addLogger(sinkLogger);
     TcpTrafficLogger traffic_logger = TcpTrafficLogger();
     logfile.addLogger(traffic_logger);
-    TcpPacket::set_packet_size(9000); // it's a datacentre, use jumbograms
+    //TcpPacket::set_packet_size(9000); // it's a datacentre, use jumbograms
     TcpSrc* ndpSrc;
     TcpSink* ndpSnk;
 
@@ -176,8 +157,8 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef FAT_TREE
-    FatTreeTopology* top = new FatTreeTopology(no_of_nodes, memFromPkt(8), &logfile, 
-					       &eventlist,ff,ECN,1);
+    FatTreeTopology* top = new FatTreeTopology(no_of_nodes, queuesize, &logfile, 
+					       &eventlist,ff,ECN,0);
 #endif
 
 #ifdef OV_FAT_TREE
@@ -213,7 +194,7 @@ int main(int argc, char **argv) {
 	    net_paths[i][j] = NULL;
     }
     
-#ifdef USE_FIRST_FIT
+#if USE_FIRST_FIT
     if (ff)
 	ff->net_paths = net_paths;
 #endif
@@ -275,8 +256,7 @@ int main(int argc, char **argv) {
 		    ndpSrc = new DCTCPSrc(NULL, NULL, eventlist);
 		    ndpSnk = new TcpSink();
 		    //}
-		ndpSrc->set_ssthresh(cwnd*Packet::data_packet_size());
-
+		ndpSrc->set_ssthresh(ssthresh*Packet::data_packet_size());
 		
 		ndpSrc->setName("dctcp_" + ntoa(src) + "_" + ntoa(dest));
 		logfile.writeName(*ndpSrc);
@@ -345,14 +325,6 @@ int main(int argc, char **argv) {
 			paths << "Route from "<< ntoa(src) << " to " << ntoa(dest) << "  (" << ll << ") -> " ;
 			print_path(paths,net_paths[src][dest]->at(ll));
 		    }
-		    /*				if (src>=12){
-						assert(net_paths[src][dest]->size()>1);
-						net_paths[src][dest]->erase(net_paths[src][dest]->begin());
-						paths << "Killing entry!" << endl;
-						
-						if (choice>=net_paths[src][dest]->size())
-						choice = 0;
-						}*/
 #endif
 		    routeout = new Route(*(net_paths[src][dest]->at(choice)));
 		    routeout->push_back(ndpSnk);
@@ -379,7 +351,6 @@ int main(int argc, char **argv) {
 		}
 	    }
 	}
-    //    ShortFlows* sf = new ShortFlows(2560, eventlist, net_paths,conns,lg, &ndpRtxScanner);
 
     cout << "Mean number of subflows " << ntoa((double)tot_subs/cnt_con)<<endl;
 
@@ -389,7 +360,6 @@ int main(int argc, char **argv) {
     logfile.write("# subflows=" + ntoa(subflow_count));
     logfile.write("# hostnicrate = " + ntoa(HOST_NIC) + " pkt/sec");
     logfile.write("# corelinkrate = " + ntoa(HOST_NIC*CORE_TO_HOST) + " pkt/sec");
-    //logfile.write("# buffer = " + ntoa((double) (queues_na_ni[0][1]->_maxsize) / ((double) pktsize)) + " pkt");
     double rtt = timeAsSec(timeFromUs(RTT));
     logfile.write("# rtt =" + ntoa(rtt));
 
@@ -398,34 +368,6 @@ int main(int argc, char **argv) {
     }
 
     cout << "Done" << endl;
-
-    /*    list <const Route*>::iterator rt_i;
-    int counts[10]; int hop;
-    for (int i = 0; i < 10; i++)
-	counts[i] = 0;
-    for (rt_i = routes.begin(); rt_i != routes.end(); rt_i++) {
-	const Route* r = (*rt_i);
-	//print_route(*r);
-	cout << "Path:" << endl;
-	hop = 0;
-	for (int i = 0; i < r->size(); i++) {
-	    PacketSink *ps = (*r)[i]; 
-	    CompositeQueue *q = dynamic_cast<CompositeQueue*>(ps);
-	    if (q == 0) {
-		cout << ps->nodename() << endl;
-	    } else {
-		cout << q->nodename() << " id=" << q->id << " " << q->num_packets() << "pkts " 
-		     << q->num_headers() << "hdrs " << q->num_acks() << "acks " << q->num_nacks() << "nacks " << q->num_stripped() << "stripped"
-		     << endl;
-		counts[hop] += q->num_stripped();
-		hop++;
-	    }
-	} 
-	cout << endl;
-    }
-    for (int i = 0; i < 10; i++)
-	cout << "Hop " << i << " Count " << counts[i] << endl;
-    */
 }
 
 string ntoa(double n) {
