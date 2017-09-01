@@ -278,7 +278,6 @@ bool NdpSrc::is_bad_path() {
 /* Process a return-to-sender packet */
 void NdpSrc::processRTS(NdpPacket& pkt){
     assert(pkt.bounced());
-    //printf("Got a bounced packet!\n");
     pkt.unbounce(ACKSIZE + _mss);
     
     _sent_times.erase(pkt.seqno());
@@ -1005,7 +1004,7 @@ void NdpSink::receivePacket(Packet& pkt) {
     case NDPPULL:
 	// Is there anything we should do here?  Generally won't happen unless the topolgy is very asymmetric.
 	assert(pkt.bounced());
-	cerr << "Got bounced feedback packet!\n";
+	cout << "Got bounced feedback packet!\n";
 	p->free();
 	return;
     }
