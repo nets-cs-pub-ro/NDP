@@ -472,7 +472,7 @@ void MultipathTcpLoggerSimple::logMultipathTcp(MultipathTcpSrc& mtcp,
 string MultipathTcpLoggerSimple::event_to_str(RawLogEvent& event) {
     stringstream ss;
     ss << fixed << setprecision(9) << event._time;
-    ss << " Type=MTCP ID=" << event._id;
+    ss << " Type MTCP ID " << event._id;
     switch(event._ev) {
     case MultipathTcpLogger::CHANGE_A:
 	ss << " Ev CHANGE_A" << " ID " << event._id 
@@ -702,7 +702,7 @@ string TcpSinkLoggerSampling::event_to_str(RawLogEvent& event) {
 	// this case is probably unreachable, because RATE is logged under
 	// Type=MTCP, whereas it really should have its own MTCP_SINK
 	// type
-	ss << " Type=MTCP ID=" << event._id;
+	ss << " Type MTCP ID " << event._id;
 	switch(event._ev) {
 	case MultipathTcpLogger::RATE:
 	    ss << " Ev RATE A " << event._val1 << " Gput " << (uint64_t)event._val2 
