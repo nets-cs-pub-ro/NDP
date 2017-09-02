@@ -6,7 +6,7 @@ INCLUDE= -I/$(CRT)/.. -I$(CRT)
 LIB=-L.. 
 #-Lksp
 
-all:	htsim_tcp htsim_ndp htsim_dctcp_permutation htsim_ndp_permutation htsim_ndp_random htsim_ndp_permutation_lossless htsim_ndp_permutation_fail htsim_dctcp_permutation_fail htsim_ndp_incast htsim_ndp_incast_shortflows htsim_ndp_incast_collateral htsim_ndp_outcast htsim_ndp_outcast_shortflows htsim_tcp_permutation htsim_tcp_perm_shortflows htsim_ndp_perm_shortflows htsim_tcp_incast_shortflows htsim_dctcp_permutation_lossless htsim_ndp_incast_shortflows_lossless htsim_dctcp_incast_shortflows htsim_dctcp_random_shortflows htsim_dctcp_random_shortflows_lossless htsim_dctcp_perm_shortflows htsim_dctcp_perm_shortflows_lossless htsim_ndp_random_shortflows htsim_ndp_oversubscribed htsim_dctcp_oversubscribed htsim_ndp_in_out htsim_dctcp_incast_collateral htsim_dctcp_incast_collateral_lossless 
+all:	htsim_tcp htsim_ndp htsim_dctcp_permutation htsim_ndp_permutation htsim_ndp_random htsim_ndp_permutation_lossless htsim_ndp_permutation_fail htsim_ndp_incast htsim_ndp_incast_shortflows htsim_ndp_incast_collateral htsim_ndp_outcast htsim_ndp_outcast_shortflows htsim_tcp_permutation htsim_tcp_perm_shortflows htsim_ndp_perm_shortflows htsim_tcp_incast_shortflows htsim_dctcp_permutation_lossless htsim_ndp_incast_shortflows_lossless htsim_dctcp_incast_shortflows htsim_dctcp_random_shortflows htsim_dctcp_random_shortflows_lossless htsim_dctcp_perm_shortflows htsim_dctcp_perm_shortflows_lossless htsim_ndp_random_shortflows htsim_ndp_oversubscribed htsim_dctcp_oversubscribed htsim_ndp_in_out htsim_dctcp_incast_collateral htsim_dctcp_incast_collateral_lossless 
 #htsim_ndp_incast_shortflows_demo 
 
 htsim_tcp: main.o firstfit.o ../libhtsim.a vl2_topology.o fat_tree_topology.o bcube_topology.o connection_matrix.o oversubscribed_fat_tree_topology.o shortflows.o multihomed_fat_tree_topology.o star_topology.o
@@ -54,9 +54,6 @@ htsim_ndp_oversubscribed_shortflows:  main_ndp_oversubscribed_shortflows.o first
 
 htsim_ndp_permutation_fail: main_ndp_permutation_fail.o firstfit.o ../libhtsim.a vl2_topology.o fat_tree_topology.o bcube_topology.o connection_matrix.o oversubscribed_fat_tree_topology.o shortflows.o multihomed_fat_tree_topology.o star_topology.o
 	$(CC) $(CFLAGS) firstfit.o main_ndp_permutation_fail.o vl2_topology.o fat_tree_topology.o bcube_topology.o connection_matrix.o oversubscribed_fat_tree_topology.o shortflows.o star_topology.o multihomed_fat_tree_topology.o $(LIB) -lhtsim -o htsim_ndp_permutation_fail
-
-htsim_dctcp_permutation_fail: main_dctcp_permutation_fail.o firstfit.o ../libhtsim.a vl2_topology.o fat_tree_topology.o bcube_topology.o connection_matrix.o oversubscribed_fat_tree_topology.o shortflows.o multihomed_fat_tree_topology.o star_topology.o
-	$(CC) $(CFLAGS) firstfit.o main_dctcp_permutation_fail.o vl2_topology.o fat_tree_topology.o bcube_topology.o connection_matrix.o oversubscribed_fat_tree_topology.o shortflows.o star_topology.o multihomed_fat_tree_topology.o $(LIB) -lhtsim -o htsim_dctcp_permutation_fail
 
 htsim_ndp_incast: main_ndp_incast.o firstfit.o ../libhtsim.a vl2_topology.o fat_tree_topology.o bcube_topology.o connection_matrix.o oversubscribed_fat_tree_topology.o shortflows.o multihomed_fat_tree_topology.o star_topology.o
 	$(CC) $(CFLAGS) firstfit.o main_ndp_incast.o vl2_topology.o fat_tree_topology.o bcube_topology.o connection_matrix.o oversubscribed_fat_tree_topology.o shortflows.o star_topology.o multihomed_fat_tree_topology.o $(LIB) -lhtsim -o htsim_ndp_incast
@@ -173,9 +170,6 @@ main_ndp_oversubscribed_shortflows.o: main_ndp_oversubscribed_shortflows.cpp
 
 main_ndp_permutation_fail.o: main_ndp_permutation_fail.cpp
 	$(CC) $(INCLUDE) $(CFLAGS) -c main_ndp_permutation_fail.cpp 
-
-main_dctcp_permutation_fail.o: main_dctcp_permutation_fail.cpp
-	$(CC) $(INCLUDE) $(CFLAGS) -c main_dctcp_permutation_fail.cpp 
 
 main_ndp_incast.o: main_ndp_incast.cpp
 	$(CC) $(INCLUDE) $(CFLAGS) -c main_ndp_incast.cpp 

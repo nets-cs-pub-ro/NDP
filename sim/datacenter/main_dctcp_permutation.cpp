@@ -54,7 +54,7 @@ EventList eventlist;
 Logfile* lg;
 
 void exit_error(char* progr) {
-    cout << "Usage " << progr << " (see src code for paramaters)" << endl;
+    cerr << "Usage " << progr << " (see src code for parameters)" << endl;
     exit(1);
 }
 
@@ -77,11 +77,12 @@ int main(int argc, char **argv) {
     int no_of_conns = DEFAULT_NODES, no_of_nodes = DEFAULT_NODES, ssthresh = 15;
     mem_b queuesize = memFromPkt(DEFAULT_QUEUE_SIZE);
     stringstream filename(ios_base::out);
-
+    int failed_links = 0;
     int i = 1;
     filename << "logout.dat";
 
     while (i<argc) {
+	if (i == argc-1) exit_error(argv[0]);
 	if (!strcmp(argv[i],"-o")){
 	    filename.str(std::string());
 	    filename << argv[i+1];
@@ -103,10 +104,14 @@ int main(int argc, char **argv) {
 	    i++;
 	} else if (!strcmp(argv[i],"-q")){
 	    queuesize = memFromPkt(atoi(argv[i+1]));
+	    cout << "queuesize "<<queuesize << endl;
+	    i++;
+	} else if (!strcmp(argv[i],"-fail")){
+	    failed_links = atoi(argv[i+1]);
+	    cout << "failed_links "<<failed_links << endl;
 	    i++;
 	} else
 	    exit_error(argv[0]);
-
 	i++;
     }
     srand(time(NULL));
@@ -158,7 +163,7 @@ int main(int argc, char **argv) {
 
 #ifdef FAT_TREE
     FatTreeTopology* top = new FatTreeTopology(no_of_nodes, queuesize, &logfile, 
-					       &eventlist,ff,ECN,0);
+					       &eventlist,ff,ECN,failed_links);
 #endif
 
 #ifdef OV_FAT_TREE
