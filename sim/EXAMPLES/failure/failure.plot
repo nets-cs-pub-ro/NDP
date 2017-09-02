@@ -1,6 +1,6 @@
 set term pdfcairo size 4,2 font "Helvetica,18"
 set output "failure.pdf"
-set yrange [0:]
+set yrange [0:10]
 set xlabel "Flow number" offset 0,0.5
 set ylabel "Throughput (Gbps)" offset 2.0,0
 #set key font "Helvetica,20"

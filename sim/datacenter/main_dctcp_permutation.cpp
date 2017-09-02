@@ -53,7 +53,8 @@ EventList eventlist;
 
 Logfile* lg;
 
-void exit_error(char* progr) {
+void exit_error(char* progr, char *param) {
+    cerr << "Bad parameter: " << param << endl;
     cerr << "Usage " << progr << " (see src code for parameters)" << endl;
     exit(1);
 }
@@ -82,7 +83,7 @@ int main(int argc, char **argv) {
     filename << "logout.dat";
 
     while (i<argc) {
-	if (i == argc-1) exit_error(argv[0]);
+	if (i == argc-1) exit_error(argv[0], argv[i]);
 	if (!strcmp(argv[i],"-o")){
 	    filename.str(std::string());
 	    filename << argv[i+1];
@@ -111,7 +112,7 @@ int main(int argc, char **argv) {
 	    cout << "failed_links "<<failed_links << endl;
 	    i++;
 	} else
-	    exit_error(argv[0]);
+	    exit_error(argv[0], argv[i]);
 	i++;
     }
     srand(time(NULL));
@@ -144,14 +145,13 @@ int main(int argc, char **argv) {
     logfile.addLogger(sinkLogger);
     TcpTrafficLogger traffic_logger = TcpTrafficLogger();
     logfile.addLogger(traffic_logger);
-    //TcpPacket::set_packet_size(9000); // it's a datacentre, use jumbograms
-    TcpSrc* ndpSrc;
-    TcpSink* ndpSnk;
+    TcpSrc* tcpSrc;
+    TcpSink* tcpSnk;
 
     Route* routeout, *routein;
     double extrastarttime;
 
-    TcpRtxTimerScanner ndpRtxScanner(timeFromMs(10), eventlist);
+    TcpRtxTimerScanner tcpRtxScanner(timeFromMs(10), eventlist);
    
     int dest;
 
@@ -254,22 +254,22 @@ int main(int argc, char **argv) {
 		cnt_con ++;
 		
 		//if (connID==1){
-		//  ndpSrc = new DCTCPSrcTransfer(NULL, NULL, eventlist,90000,NULL,NULL);
-		//  ndpSnk = new DCTCPSinkTransfer();
+		//  tcpSrc = new DCTCPSrcTransfer(NULL, NULL, eventlist,90000,NULL,NULL);
+		//  tcpSnk = new DCTCPSinkTransfer();
 		//}
 		//else {
-		    ndpSrc = new DCTCPSrc(NULL, NULL, eventlist);
-		    ndpSnk = new TcpSink();
+		    tcpSrc = new DCTCPSrc(NULL, NULL, eventlist);
+		    tcpSnk = new TcpSink();
 		    //}
-		ndpSrc->set_ssthresh(ssthresh*Packet::data_packet_size());
+		tcpSrc->set_ssthresh(ssthresh*Packet::data_packet_size());
 		
-		ndpSrc->setName("dctcp_" + ntoa(src) + "_" + ntoa(dest));
-		logfile.writeName(*ndpSrc);
+		tcpSrc->setName("dctcp_" + ntoa(src) + "_" + ntoa(dest));
+		logfile.writeName(*tcpSrc);
 		
-		ndpSnk->setName("dctcp_sink_" + ntoa(src) + "_" + ntoa(dest));
-		logfile.writeName(*ndpSnk);
+		tcpSnk->setName("dctcp_sink_" + ntoa(src) + "_" + ntoa(dest));
+		logfile.writeName(*tcpSnk);
 		
-		ndpRtxScanner.registerTcp(*ndpSrc);
+		tcpRtxScanner.registerTcp(*tcpSrc);
 		
 		int choice = 0;
 		
@@ -332,27 +332,27 @@ int main(int argc, char **argv) {
 		    }
 #endif
 		    routeout = new Route(*(net_paths[src][dest]->at(choice)));
-		    routeout->push_back(ndpSnk);
+		    routeout->push_back(tcpSnk);
 		    
 		    routein = new Route(*(top->get_paths(dest,src)->at(choice)));
-		    routein->push_back(ndpSrc);
+		    routein->push_back(tcpSrc);
 		    
 		    extrastarttime = 0 * drand();
 		    
-		    ndpSrc->connect(*routeout, *routein, *ndpSnk, timeFromMs(extrastarttime));
+		    tcpSrc->connect(*routeout, *routein, *tcpSnk, timeFromMs(extrastarttime));
 	  
 #ifdef PACKET_SCATTER
-		    ndpSrc->set_paths(net_paths[src][dest]);
-		    ndpSnk->set_paths(net_paths[dest][src]);
+		    tcpSrc->set_paths(net_paths[src][dest]);
+		    tcpSnk->set_paths(net_paths[dest][src]);
 
 		    cout << "Using PACKET SCATTER!!!!"<<endl;
 #endif
 
 	  
 		    //	  if (ff)
-		    //	    ff->add_flow(src,dest,ndpSrc);
+		    //	    ff->add_flow(src,dest,tcpSrc);
 	  
-		    sinkLogger.monitorSink(ndpSnk);
+		    sinkLogger.monitorSink(tcpSnk);
 		}
 	    }
 	}

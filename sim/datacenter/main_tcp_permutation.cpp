@@ -35,9 +35,9 @@
 #define PERIODIC 0
 #include "main.h"
 
-//int RTT = 10; // this is per link delay; identical RTT microseconds = 0.02 ms
 uint32_t RTT = 1; // this is per link delay in us; identical RTT microseconds = 0.02 ms
 int DEFAULT_NODES = 128;
+#define DEFAULT_QUEUE_SIZE 100
 
 FirstFit* ff = NULL;
 unsigned int subflow_count = 8;
@@ -45,7 +45,6 @@ unsigned int subflow_count = 8;
 string ntoa(double n);
 string itoa(uint64_t n);
 
-//#define SWITCH_BUFFER (SERVICE * RTT / 1000)
 #define USE_FIRST_FIT 0
 #define FIRST_FIT_INTERVAL 100
 
@@ -53,8 +52,9 @@ EventList eventlist;
 
 Logfile* lg;
 
-void exit_error(char* progr) {
-    cout << "Usage " << progr << " [UNCOUPLED(DEFAULT)|COUPLED_INC|FULLY_COUPLED|COUPLED_EPSILON] [epsilon][COUPLED_SCALABLE_TCP" << endl;
+void exit_error(char* progr, char *param) {
+    cerr << "Bad parameter: " << param << endl;
+    cerr << "Usage " << progr << " [UNCOUPLED(DEFAULT)|COUPLED_INC|FULLY_COUPLED|COUPLED_EPSILON] [epsilon][COUPLED_SCALABLE_TCP" << endl;
     exit(1);
 }
 
@@ -71,14 +71,15 @@ void print_path(std::ofstream &paths, const Route* rt){
 }
 
 int main(int argc, char **argv) {
-    Packet::set_packet_size(9000);
-    eventlist.setEndtime(timeFromSec(2.01));
+    TcpPacket::set_packet_size(9000); // it's a datacentre, use jumbograms
+    eventlist.setEndtime(timeFromSec(0.201));
     Clock c(timeFromSec(5 / 100.), eventlist);
     int algo = UNCOUPLED;
     double epsilon = 1;
-    int no_of_conns = 0, no_of_nodes = DEFAULT_NODES, cwnd = 15;
+    int no_of_conns = DEFAULT_NODES, no_of_nodes = DEFAULT_NODES, ssthresh = 15;
+    mem_b queuesize = memFromPkt(DEFAULT_QUEUE_SIZE);
     stringstream filename(ios_base::out);
-
+    int failed_links = 0;
     int i = 1;
     filename << "logout.dat";
 
@@ -98,9 +99,17 @@ int main(int argc, char **argv) {
 	    no_of_nodes = atoi(argv[i+1]);
 	    cout << "no_of_nodes "<<no_of_nodes << endl;
 	    i++;
-	} else if (!strcmp(argv[i],"-cwnd")){
-	    cwnd = atoi(argv[i+1]);
-	    cout << "cwnd "<< cwnd << endl;
+	} else if (!strcmp(argv[i],"-ssthresh")){
+	    ssthresh = atoi(argv[i+1]);
+	    cout << "ssthresh "<< ssthresh << endl;
+	    i++;
+	} else if (!strcmp(argv[i],"-q")){
+	    queuesize = memFromPkt(atoi(argv[i+1]));
+	    cout << "queuesize "<<queuesize << endl;
+	    i++;
+	} else if (!strcmp(argv[i],"-fail")){
+	    failed_links = atoi(argv[i+1]);
+	    cout << "failed_links "<<failed_links << endl;
 	    i++;
 	} else if (!strcmp(argv[i], "UNCOUPLED"))
 	    algo = UNCOUPLED;
@@ -120,7 +129,7 @@ int main(int argc, char **argv) {
 	    }
 	    printf("Using epsilon %f\n", epsilon);
 	} else
-	    exit_error(argv[0]);
+	    exit_error(argv[0], argv[i]);
 
 	i++;
     }
@@ -153,18 +162,17 @@ int main(int argc, char **argv) {
 
     logfile.setStartTime(timeFromSec(0));
 
-    TcpSinkLoggerSampling sinkLogger = TcpSinkLoggerSampling(timeFromMs(10), eventlist);
+    TcpSinkLoggerSampling sinkLogger = TcpSinkLoggerSampling(timeFromMs(50), eventlist);
     logfile.addLogger(sinkLogger);
     TcpTrafficLogger traffic_logger = TcpTrafficLogger();
     logfile.addLogger(traffic_logger);
-    TcpPacket::set_packet_size(9000); // it's a datacentre, use jumbograms
-    TcpSrc* ndpSrc;
-    TcpSink* ndpSnk;
+    TcpSrc* tcpSrc;
+    TcpSink* tcpSnk;
 
     Route* routeout, *routein;
     double extrastarttime;
 
-    TcpRtxTimerScanner ndpRtxScanner(timeFromMs(10), eventlist);
+    TcpRtxTimerScanner tcpRtxScanner(timeFromMs(10), eventlist);
    
     int dest;
 
@@ -175,8 +183,8 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef FAT_TREE
-    FatTreeTopology* top = new FatTreeTopology(no_of_nodes, memFromPkt(100), &logfile, 
-					       &eventlist,ff,RANDOM,1);
+    FatTreeTopology* top = new FatTreeTopology(no_of_nodes, queuesize, &logfile, 
+					       &eventlist,ff,RANDOM,failed_links);
 #endif
 
 #ifdef OV_FAT_TREE
@@ -212,7 +220,7 @@ int main(int argc, char **argv) {
 	    net_paths[i][j] = NULL;
     }
     
-#ifdef USE_FIRST_FIT
+#if USE_FIRST_FIT
     if (ff)
 	ff->net_paths = net_paths;
 #endif
@@ -288,23 +296,23 @@ int main(int argc, char **argv) {
 
 		    //if (connID==1){
 		    //cout << "Creating SRC transfer " << endl;
-		    //ndpSrc = new TcpSrcTransfer(NULL, NULL, eventlist,90000,net_paths[src][dest],NULL);
-		    //ndpSnk = new TcpSinkTransfer();
+		    //tcpSrc = new TcpSrcTransfer(NULL, NULL, eventlist,90000,net_paths[src][dest],NULL);
+		    //tcpSnk = new TcpSinkTransfer();
 		    //}
 		    //else 
 			{
-			ndpSrc = new TcpSrc(NULL, NULL, eventlist);
-			ndpSrc->set_ssthresh(cwnd*Packet::data_packet_size());
-			ndpSnk = new TcpSink();
+			tcpSrc = new TcpSrc(NULL, NULL, eventlist);
+			tcpSrc->set_ssthresh(ssthresh*Packet::data_packet_size());
+			tcpSnk = new TcpSink();
 		    }
 		    
-		    ndpSrc->setName("ndp_" + ntoa(src) + "_" + ntoa(dest)+"("+ntoa(inter)+")");
-		    logfile.writeName(*ndpSrc);
+		    tcpSrc->setName("tcp_" + ntoa(src) + "_" + ntoa(dest)+"("+ntoa(inter)+")");
+		    logfile.writeName(*tcpSrc);
 		    
-		    ndpSnk->setName("ndp_sink_" + ntoa(src) + "_" + ntoa(dest)+ "("+ntoa(inter)+")");
-		    logfile.writeName(*ndpSnk);
+		    tcpSnk->setName("tcp_sink_" + ntoa(src) + "_" + ntoa(dest)+ "("+ntoa(inter)+")");
+		    logfile.writeName(*tcpSnk);
 		    
-		    ndpRtxScanner.registerTcp(*ndpSrc);
+		    tcpRtxScanner.registerTcp(*tcpSrc);
 		    
 		    int choice = 0;
 		    
@@ -400,15 +408,15 @@ int main(int argc, char **argv) {
 						}*/
 #endif
 		    routeout = new Route(*(net_paths[src][dest]->at(choice)));
-		    routeout->push_back(ndpSnk);
+		    routeout->push_back(tcpSnk);
 		    
 		    routein = new Route(*top->get_paths(dest,src)->at(choice));
-		    routein->push_back(ndpSrc);
+		    routein->push_back(tcpSrc);
 		    
 		    extrastarttime = 0 * drand();
 		    
 		    if (mtcp){
-			mtcp->addSubflow(ndpSrc);
+			mtcp->addSubflow(tcpSrc);
 		    
 			if (inter == 0) {
 			    mtcp->setName("multipath" + ntoa(src) + "_" + ntoa(dest)+"("+ntoa(connection)+")");
@@ -416,25 +424,25 @@ int main(int argc, char **argv) {
 			}
 		    }
 		    
-		    ndpSrc->connect(*routeout, *routein, *ndpSnk, timeFromMs(extrastarttime));
+		    tcpSrc->connect(*routeout, *routein, *tcpSnk, timeFromMs(extrastarttime));
 	  
 #ifdef PACKET_SCATTER
-		    ndpSrc->set_paths(net_paths[src][dest]);
-		    ndpSnk->set_paths(net_paths[dest][src]);
+		    tcpSrc->set_paths(net_paths[src][dest]);
+		    tcpSnk->set_paths(net_paths[dest][src]);
 
 		    cout << "Using PACKET SCATTER!!!!"<<endl;
 #endif
 
 	  
 		    //	  if (ff)
-		    //	    ff->add_flow(src,dest,ndpSrc);
+		    //	    ff->add_flow(src,dest,tcpSrc);
 		    
-		    sinkLogger.monitorMultipathSink(ndpSnk);
+		    sinkLogger.monitorMultipathSink(tcpSnk);
 		}
 	    }
 	}
     }
-    //    ShortFlows* sf = new ShortFlows(2560, eventlist, net_paths,conns,lg, &ndpRtxScanner);
+    //    ShortFlows* sf = new ShortFlows(2560, eventlist, net_paths,conns,lg, &tcpRtxScanner);
 
     cout << "Mean number of subflows " << ntoa((double)tot_subs/cnt_con)<<endl;
 
