@@ -16,6 +16,7 @@ set key right bottom
 #     "rates.dcqcn" using 0:($1/1000) w l lc rgb "green" lw 3 t "DCQCN"
 
 plot "logfile.rates" using 0:1 w l lc rgb "red" lw 3 t "NDP",\
+     "mptcp_logfile.rates" using 0:1 w l lc rgb "blue" lw 3 t "MPTCP",\
      "dctcp_logfile.rates" using 0:1 w l lc rgb "black" lw 3 t "DCTCP"
 
     
