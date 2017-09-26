@@ -1,0 +1,424 @@
+diff -Naur ndp_modules/switch_ndp_output_port_lookup_v1_0_0/hdl/eth_parser.v switch_ndp_output_port_lookup_v1_0_0/hdl/eth_parser.v
+--- ndp_modules/switch_ndp_output_port_lookup_v1_0_0/hdl/eth_parser.v	2017-09-01 11:20:45.111848188 +0100
++++ switch_ndp_output_port_lookup_v1_0_0/hdl/eth_parser.v	2017-09-01 14:37:28.735745394 +0100
+@@ -61,13 +61,14 @@
+       input  [C_S_AXIS_DATA_WIDTH-1:0]   tdata,
+       input  [C_S_AXIS_TUSER_WIDTH-1:0]  tuser,
+       input                              valid,
+-      input 				             tlast,
++      input 				 tlast,
+ 
+       // --- Interface to output_port_lookup
+       output reg [47:0]                  dst_mac,
+       output reg [47:0]                  src_mac,
+       output reg                         eth_done,
+       output reg [NUM_QUEUES-1:0]        src_port,
++      output reg [10:0]			 pkt_len,
+   
+       // --- Misc
+       input                              reset,
+@@ -86,6 +87,7 @@
+    reg [47:0]                  src_mac_w;
+    reg                         eth_done_w;
+    reg [NUM_QUEUES-1:0]        src_port_w;
++   reg [10:0]		       pkt_len_w;
+    
+    reg [NUM_STATES-1:0]        state, state_next;
+ 
+@@ -96,6 +98,7 @@
+       dst_mac_w      = 0;
+       eth_done_w     = 0;
+       src_port_w     = 0;
++      pkt_len_w      = 0;
+       state_next     = state;
+       
+ 	  case(state)
+@@ -103,9 +106,10 @@
+         READ_MAC_ADDRESSES: begin
+            if(valid) begin
+               src_port_w   = tuser[SRC_PORT_POS+7:SRC_PORT_POS];
++	      pkt_len_w    = tuser[10:0];
+               dst_mac_w    = tdata[47:0];
+               src_mac_w    = tdata[95:48];
+-	          eth_done_w   = 1;
++	      eth_done_w   = 1;
+               state_next = WAIT_EOP;
+            end
+         end // case: READ_WORD_1
+@@ -119,18 +123,20 @@
+ 
+    always @(posedge clk) begin
+       if(reset) begin
+-	     src_port <= {NUM_QUEUES{1'b0}};
+-		 dst_mac  <= 48'b0;
+-		 src_mac  <= 48'b0;
+-		 eth_done <= 0;
++	src_port <= {NUM_QUEUES{1'b0}};
++	dst_mac  <= 48'b0;
++	src_mac  <= 48'b0;
++	pkt_len  <= 11'b0;
++	eth_done <= 0;
+ 		 
+-         state  <= READ_MAC_ADDRESSES;
++        state  <= READ_MAC_ADDRESSES;
+       end
+       else begin
+-	     src_port <= src_port_w;
+-		 dst_mac  <= dst_mac_w;
+-		 src_mac  <= src_mac_w;
+-		 eth_done <= eth_done_w;
++	src_port <= src_port_w;
++	dst_mac  <= dst_mac_w;
++	src_mac  <= src_mac_w;
++	pkt_len  <= pkt_len_w;
++	eth_done <= eth_done_w;
+ 		 
+          state  <= state_next;
+       end // else: !if(reset)
+diff -Naur ndp_modules/switch_ndp_output_port_lookup_v1_0_0/hdl/mac_cam_lut.v switch_ndp_output_port_lookup_v1_0_0/hdl/mac_cam_lut.v
+--- ndp_modules/switch_ndp_output_port_lookup_v1_0_0/hdl/mac_cam_lut.v	2017-09-01 11:20:45.111848188 +0100
++++ switch_ndp_output_port_lookup_v1_0_0/hdl/mac_cam_lut.v	2017-09-01 14:37:28.739745394 +0100
+@@ -10,7 +10,7 @@
+ * Stanford University and the University of Cambridge Computer Laboratory
+ * under National Science Foundation under Grant No. CNS-0855268,
+ * the University of Cambridge Computer Laboratory under EPSRC INTERNET Project EP/H040536/1 and
+-* by the University of Cambridge Computer Laboratory under DARPA/AFRL contract FA8750-11-C-0249 ("MRC2"), 
++* by the University of Cambridge Computer Laboratory under DARPA/AFRL contract FA8750-11-C-0249 ("MRC2"),
+ * as part of the DARPA MRC research programme.
+ *
+ * @NETFPGA_LICENSE_HEADER_START@
+@@ -49,13 +49,13 @@
+ */
+ 
+  `timescale 1ns/1ps
+- 
++
+  module mac_cam_lut
+  #(
+    parameter NUM_OUTPUT_QUEUES = 8,
+    parameter LUT_DEPTH_BITS    = 4,
+    parameter LUT_DEPTH         = 2**LUT_DEPTH_BITS,
+-   parameter DEFAULT_MISS_OUTPUT_PORTS = 8'h55     // only send to the MAC txfifos not the cpu
++   parameter DEFAULT_MISS_OUTPUT_PORTS = 8'h45     // only send to the MAC txfifos not the cpu
+  )
+  (
+    // --- core functionality signals
+@@ -63,18 +63,19 @@
+    input  [47:0]                       src_mac,
+    input  [NUM_OUTPUT_QUEUES-1:0]      src_port,
+    input                               lookup_req,
++   input  [10:0]		       		pkt_len,
+    output reg [NUM_OUTPUT_QUEUES-1:0]  dst_ports,
+-   
++
+    // --- lookup done signal
+    output reg                          lookup_done,   // pulses high on lookup done
+    output reg                          lut_miss,
+    output reg                          lut_hit,
+-   
++
+    // --- Misc
+    input                               clk,
+    input                               reset
+  );
+- 
++
+   function integer log2;
+     input integer number;
+     begin
+@@ -84,97 +85,141 @@
+       end
+     end
+   endfunction // log2
+- 
++
+   //--------------------- Internal Parameter-------------------------
+- 
++
++  localparam DEFAULT_MISS_SRC1 = 8'h45;
++  localparam DEFAULT_MISS_SRC2 = 8'h51;
++  localparam MAX_LENGHT	       = 7'h64;
++  localparam PENALTY	       = 11'h5dc;
++  localparam PENALTY_WIDTH     = 11;
++
+   //---------------------- Wires and regs----------------------------
+-  
++
+   genvar i;
+-   
+-  reg [NUM_OUTPUT_QUEUES+48-1:0]    lut [0:LUT_DEPTH-1];
+-  reg [LUT_DEPTH_BITS-1:0]		    lut_wr_addr;
+-  
++
++  reg [PENALTY_WIDTH+NUM_OUTPUT_QUEUES+48-1:0]    	lut [0:LUT_DEPTH-1];
++  reg [LUT_DEPTH_BITS-1:0]		    		lut_wr_addr;
++
+   //------------------------- Logic --------------------------------
+-  
+-      wire [NUM_OUTPUT_QUEUES-1:0]    rd_oq[0:LUT_DEPTH-1];
+-      wire [0:LUT_DEPTH-1]            lut_lookup_hit;
++   wire [NUM_OUTPUT_QUEUES-1:0]    rd_oq[0:LUT_DEPTH-1];
++   wire [0:LUT_DEPTH-1]            lut_lookup_hit;
++
++
++  //reg [NUM_OUTPUT_QUEUES+48-1:0]    dbg_lut0;
++ // reg [NUM_OUTPUT_QUEUES+48-1:0]    dbg_lut1;
++ // reg [NUM_OUTPUT_QUEUES+48-1:0]    dbg_lut2;
++ // reg [NUM_OUTPUT_QUEUES+48-1:0]    dbg_lut3;
++
++ // assign dbg_lut0  = lut[0];
++ // assign dbg_lut1  = lut[1];
++ // assign dbg_lut2  = lut[2];
++ // assign dbg_lut3  = lut[3];
++
+ 
+   generate
+     // LUT Lookup
+     for (i=0; i<LUT_DEPTH; i=i+1)
+ 	begin: LUT_LOOKUP
+-	  
+-  
++
++
+ 	  if (i == 0) begin: _0
+-	    assign rd_oq[i][NUM_OUTPUT_QUEUES-1:0] = (lut[i][47:0] == dst_mac) ? lut[i][NUM_OUTPUT_QUEUES+48-1:48] 
++	    assign rd_oq[i][NUM_OUTPUT_QUEUES-1:0] = (lut[i][47:0] == dst_mac) ? lut[i][NUM_OUTPUT_QUEUES+48-1:48]
+ 		                                                       : {(NUM_OUTPUT_QUEUES){1'b0}};
+-		assign lut_lookup_hit[i]   = (lut[i][47:0] == dst_mac) ? 1                                 
++		assign lut_lookup_hit[i]   = (lut[i][47:0] == dst_mac) ? 1
+ 		                                                       : 0;
+       end
+ 	  else begin: _N
+-	    assign rd_oq[i][NUM_OUTPUT_QUEUES-1:0] = (lut[i][47:0] == dst_mac) ? lut[i][NUM_OUTPUT_QUEUES+48-1:48] 
++	    assign rd_oq[i][NUM_OUTPUT_QUEUES-1:0] = (lut[i][47:0] == dst_mac) ? lut[i][NUM_OUTPUT_QUEUES+48-1:48]
+ 		                                                       : rd_oq[i-1][NUM_OUTPUT_QUEUES-1:0];
+-		assign lut_lookup_hit[i]   = (lut[i][47:0] == dst_mac) ? 1                                 
++		assign lut_lookup_hit[i]   = (lut[i][47:0] == dst_mac) ? 1
+ 		                                                       : lut_lookup_hit[i-1];
+ 	  end
+ 	end
+-	
++
+ 	// LUT Learn
+       wire [0:LUT_DEPTH-1]            lut_learn_hit;
+ 	for (i=0; i<LUT_DEPTH; i=i+1)
+ 	begin: LUT_LEARN
+ 
+-	  
++
+ 	  if (i == 0) begin: _0
+-		assign lut_learn_hit[i]     = (lut[i][47:0] == src_mac) ? 1      
++		assign lut_learn_hit[i]     = (lut[i][47:0] == src_mac) ? 1
+ 		                                                        : 0;
+       end
+ 	  else begin: _N
+-		assign lut_learn_hit[i]     = (lut[i][47:0] == src_mac) ? 1      
++		assign lut_learn_hit[i]     = (lut[i][47:0] == src_mac) ? 1
+ 		                                                        : lut_learn_hit[i-1];
+ 	  end
+-	  
+-	  always @ (posedge clk) begin: _A
+-	    if (reset)
+-		  lut[i] <= {(NUM_OUTPUT_QUEUES+48-1){1'b0}};
+-		else if (lookup_req) begin
+-		  if ((lut[i][47:0] == src_mac) ||                         // if src_mac         matches in the LUT
+-		      (~lut_learn_hit[LUT_DEPTH-1] && (lut_wr_addr == i))) // if src_mac doesn't matches in the LUT 
+-	        lut[i] <= {src_port, src_mac};
+-		end
+-	  end
++
++	always @ (posedge clk) begin: _A
++
++		if (reset)
++			lut[i] <= {(PENALTY_WIDTH+NUM_OUTPUT_QUEUES+48-1){1'b0}};
++		else begin
++			if (lookup_req) begin
++				if(~lut_learn_hit[LUT_DEPTH-1] && (lut_wr_addr == i))
++                  	//	if ((lut[i][47:0] == src_mac) ||                         	// if src_mac         matches in the LUT
++                      	//		(~lut_learn_hit[LUT_DEPTH-1] && (lut_wr_addr == i))) 	// if src_mac doesn't matches in the LUT
++                				lut[i] <= {11'h5dc,src_port, src_mac};
++				else if ((lut[i][47:0] == dst_mac)) begin
++					if(lut[i][NUM_OUTPUT_QUEUES+48-1:48] == 8'b00000100) begin
++						if(pkt_len>lut[i][PENALTY_WIDTH+NUM_OUTPUT_QUEUES+48-1:NUM_OUTPUT_QUEUES+48])
++							lut[i][PENALTY_WIDTH+NUM_OUTPUT_QUEUES+48-1:NUM_OUTPUT_QUEUES+48] <= lut[i][PENALTY_WIDTH+NUM_OUTPUT_QUEUES+48-1:NUM_OUTPUT_QUEUES+48] - pkt_len;
++						else
++							lut[i] <= {11'h5dc,8'b00010000, dst_mac};
++					end
++					else if(lut[i][NUM_OUTPUT_QUEUES+48-1:48] == 8'b00010000) begin
++						if(pkt_len>lut[i][PENALTY_WIDTH+NUM_OUTPUT_QUEUES+48-1:NUM_OUTPUT_QUEUES+48])
++							lut[i][PENALTY_WIDTH+NUM_OUTPUT_QUEUES+48-1:NUM_OUTPUT_QUEUES+48] <= lut[i][PENALTY_WIDTH+NUM_OUTPUT_QUEUES+48-1:NUM_OUTPUT_QUEUES+48] - pkt_len;
++						else
++							lut[i] <= {11'h5dc,8'b00000100, dst_mac};
++					end
++				end
++			end
++		 end
+ 	end
++  end
++
+   endgenerate
+-  
++
++
+   always @ (posedge clk) begin
+     if(reset) begin
+       lut_hit  <= 0;
+ 	  lut_miss <= 0;
+-	  
++
+ 	  lookup_done <= 0;
+ 	  dst_ports   <= {NUM_OUTPUT_QUEUES{1'b0}};
+-	  
++
+ 	  lut_wr_addr <= {LUT_DEPTH_BITS{1'b0}};
+ 	end
+ 	else begin
+ 	  lut_hit     <= 0;
+ 	  lut_miss    <= 0;
+ 	  lookup_done <= 0;
+-	  
++
+ 	  if (lookup_req) begin
+-	    lut_hit  <= lut_lookup_hit[LUT_DEPTH-1];
++	  	lut_hit  <= lut_lookup_hit[LUT_DEPTH-1];
+ 		lut_miss <= ~lut_lookup_hit[LUT_DEPTH-1];
+-		
+-	    /* if we get a miss then set the dst port to the default ports
+-         * without the source */
+-        dst_ports <= (lut_lookup_hit[LUT_DEPTH-1]) ? (rd_oq[LUT_DEPTH-1][NUM_OUTPUT_QUEUES-1:0] & ~src_port)
+-                                                   : (DEFAULT_MISS_OUTPUT_PORTS     & ~src_port);
+-	    lookup_done <= 1;
+-		
++
++	    	/* if we get a miss then set the dst port to the default ports
++         	* without the source */
++		if(src_port==8'b00000100)
++			dst_ports <= (lut_lookup_hit[LUT_DEPTH-1]) ? (rd_oq[LUT_DEPTH-1][NUM_OUTPUT_QUEUES-1:0] & ~src_port)
++                	: (DEFAULT_MISS_SRC1     & ~src_port);
++		if(src_port==8'b00010000)
++			dst_ports <= (lut_lookup_hit[LUT_DEPTH-1]) ? (rd_oq[LUT_DEPTH-1][NUM_OUTPUT_QUEUES-1:0] & ~src_port)
++			: (DEFAULT_MISS_SRC2     & ~src_port);
++		else
++			dst_ports <= (lut_lookup_hit[LUT_DEPTH-1]) ? (rd_oq[LUT_DEPTH-1][NUM_OUTPUT_QUEUES-1:0] & ~src_port)
++                	: (DEFAULT_MISS_OUTPUT_PORTS     & ~src_port);
++	    	lookup_done <= 1;
++
+ 		if (~lut_learn_hit[LUT_DEPTH-1])
+ 		  lut_wr_addr <= lut_wr_addr + 1;
+ 	  end
+ 	end
+   end
+-  
+-endmodule  
++
++endmodule
+diff -Naur ndp_modules/switch_ndp_output_port_lookup_v1_0_0/hdl/switch_ndp_output_port_lookup.v switch_ndp_output_port_lookup_v1_0_0/hdl/switch_ndp_output_port_lookup.v
+--- ndp_modules/switch_ndp_output_port_lookup_v1_0_0/hdl/switch_ndp_output_port_lookup.v	2017-09-01 11:20:45.111848188 +0100
++++ switch_ndp_output_port_lookup_v1_0_0/hdl/switch_ndp_output_port_lookup.v	2017-09-01 14:41:48.639743131 +0100
+@@ -137,18 +137,33 @@
+ 
+    //--------------------- Internal Parameter-------------------------
+    localparam LUT_DEPTH_BITS            = 4;
+-   localparam DEFAULT_MISS_OUTPUT_PORTS = 8'h55; // exclude the CPU queues
++   localparam DEFAULT_MISS_OUTPUT_PORTS = 8'h45; // exclude the CPU queues
+ 
+    localparam NUM_STATES                = 2;
+    localparam WAIT_STATE                = 1;
+    localparam SEND_STATE                = 2;
+ 
+    //---------------------- Wires and Regs ----------------------------
+-   wire [47:0]			           dst_mac;
++   wire [47:0]			   dst_mac;
+    wire [47:0]                     src_mac;
+    wire [NUM_OUTPUT_QUEUES-1:0]    src_port;
+    wire                            eth_done;
+    wire [NUM_OUTPUT_QUEUES-1:0]    dst_ports;
++   wire [10:0]			   pkt_len;
++
++   reg [47:0]                      dst_mac_r;
++   reg [47:0]                      src_mac_r;
++   reg [NUM_OUTPUT_QUEUES-1:0]     src_port_r;
++   reg                             eth_done_r;
++   reg [NUM_OUTPUT_QUEUES-1:0]     dst_ports_r;
++   reg [10:0]                      pkt_len_r;
++
++   wire [47:0]                     dst_mac_in;
++   wire [47:0]                     src_mac_in;
++   wire [NUM_OUTPUT_QUEUES-1:0]    src_port_in;
++   wire                            eth_done_in;
++   wire [NUM_OUTPUT_QUEUES-1:0]    dst_ports_in;
++   wire [10:0]                     pkt_len_in;
+ 
+    wire                            lookup_done;
+    reg				   send_packet;
+@@ -214,12 +229,13 @@
+          (.tdata    (s_axis_tdata),
+           .tuser    (s_axis_tuser),
+           .valid    (s_axis_tvalid & s_axis_tready),
+-	      .tlast    (s_axis_tlast),
++	  .tlast    (s_axis_tlast),
+ 
+-		  .dst_mac  (dst_mac),
++	  .dst_mac  (dst_mac),
+           .src_mac  (src_mac),
+           .eth_done (eth_done),
+           .src_port (src_port),
++	  .pkt_len  (pkt_len),
+           .reset    (~axis_resetn),
+           .clk      (axis_aclk));
+ 
+@@ -229,11 +245,12 @@
+        .DEFAULT_MISS_OUTPUT_PORTS(DEFAULT_MISS_OUTPUT_PORTS))
+    mac_cam_lut
+      // --- lookup and learn port
+-     (.dst_mac      (dst_mac),
+-      .src_mac      (src_mac),
+-      .src_port     (src_port),
+-      .lookup_req   (eth_done),
+-      .dst_ports    (dst_ports),
++     (.dst_mac      (dst_mac_in),
++      .src_mac      (src_mac_in),
++      .src_port     (src_port_in),
++      .lookup_req   (eth_done_in),
++      .dst_ports    (dst_ports_in),
++      .pkt_len      (pkt_len_in),
+ 
+       .lookup_done  (lookup_done),  // pulses high on lookup done
+       .lut_hit      (lut_hit),
+@@ -262,6 +279,14 @@
+     * port is found, then write the module header and move the packet
+     * to the output
+     **********************************************************************/
++
++   assign dst_mac_in 	= dst_mac_r;
++   assign src_mac_in 	= src_mac_r;
++   assign src_port_in	= src_port_r;
++   assign eth_done_in	= eth_done_r;
++   assign dst_ports_in	= dst_ports_r;
++   assign pkt_len_in	= pkt_len_r;
++
+    always @(*) begin
+       m_axis_tuser = tuser_fifo;
+       state_next   = state;
+@@ -292,9 +317,21 @@
+    always @(posedge axis_aclk) begin
+       if(~axis_resetn) begin
+          state <= WAIT_STATE;
++       	 dst_mac_r <= 0;
++     	 src_mac_r <= 0;
++   	 src_port_r <= 0;
++   	 eth_done_r <= 0;
++   	 dst_ports_r <= 0;
++   	 pkt_len_r <= 0;
+       end
+       else begin
+          state <= state_next;
++	 dst_mac_r <= dst_mac;
++	 src_mac_r <= src_mac;
++	 src_port_r <= src_port;
++	 eth_done_r <= eth_done;
++	 dst_ports_r <= dst_ports;
++	 pkt_len_r <= pkt_len;
+       end
+    end
+ 

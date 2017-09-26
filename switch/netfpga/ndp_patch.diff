@@ -1,0 +1,44 @@
+--- NetFPGA-SUME-live/Makefile	2017-09-01 11:28:32.339844119 +0100
++++ NetFPGA-SUME-ndp/Makefile	2017-09-01 10:44:02.903867366 +0100
+@@ -71,6 +71,10 @@
+ 
+ #sume:	devprojects
+ sume:
++	make -C $(LIB_HW_DIR)/contrib/cores/nf_ndp_v1_0_0/
++	make -C $(LIB_HW_DIR)/contrib/cores/nf_ndp_output_queues_v1_0_0/
++	make -C $(LIB_HW_DIR)/contrib/cores/switch_ndp_output_port_lookup_v1_0_0/
++	make -C $(LIB_HW_DIR)/contrib/cores/input_drr_arbiter_v1_0_0/
+ 	make -C $(LIB_HW_DIR)/contrib/cores/nf_endianess_manager_v1_0_0/
+ 	make -C $(LIB_HW_DIR)/std/cores/fallthrough_small_fifo_v1_0_0/
+ 	make -C $(LIB_HW_DIR)/std/cores/input_arbiter_v1_0_0/
+--- NetFPGA-SUME-live/tools/settings.sh 2017-09-01 11:28:32.347844119 +0100
++++ NetFPGA-SUME-ndp/tools/settings.sh    2017-09-01 10:44:02.907867366 +0100
+@@ -28,15 +28,15 @@
+ # @NETFPGA_LICENSE_HEADER_END@
+ #
+
+-export SUME_FOLDER=${HOME}/NetFPGA-SUME-live
++export SUME_FOLDER=${LOCAL_DIR}/NetFPGA-SUME-live
+ export XILINX_PATH=/opt/Xilinx/Vivado/2014.4
+-export NF_PROJECT_NAME=reference_switch
+-export PROJECTS=${SUME_FOLDER}/projects
++export NF_PROJECT_NAME=ndp
++export PROJECTS=${SUME_FOLDER}/contrib-projects
+ export DEV_PROJECTS=${SUME_FOLDER}/dev-projects
+ export IP_FOLDER=${SUME_FOLDER}/lib/hw/std/cores
+ export CONSTRAINTS=${SUME_FOLDER}/lib/hw/std/constraints
+ export XILINX_IP_FOLDER=${SUME_FOLDER}/lib/hw/xilinx/cores
+-export NF_DESIGN_DIR=${SUME_FOLDER}/projects/${NF_PROJECT_NAME}
++export NF_DESIGN_DIR=${SUME_FOLDER}/contrib-projects/${NF_PROJECT_NAME}
+ export NF_WORK_DIR=/tmp/${USER}
+ export PYTHONPATH=.:${SUME_FOLDER}/tools/scripts/:${NF_DESIGN_DIR}/lib/Python:${SUME_FOLDER}/tools/scripts/NFTest
+ export DRIVER_NAME=sume_riffa_v1_0_0
+--- NetFPGA-SUME-live/tools/scripts/nf_test.py  2017-09-01 11:28:28.295844154 +0100
++++ NetFPGA-SUME-ndp/tools/scripts/nf_test.py     2017-09-01 10:44:02.907867366 +0100
+@@ -73,7 +73,7 @@
+ run = 'run.py'
+ commonDir = 'common'
+ globalDir = 'global'
+-projectRoot = 'projects'
++projectRoot = 'contrib-projects'
+ testRoot = 'test'
