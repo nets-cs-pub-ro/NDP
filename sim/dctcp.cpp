@@ -59,7 +59,7 @@ DCTCPSrc::receivePacket(Packet& pkt)
 	_pkts_seen = 0;
 	_pkts_marked = 0;
 
-	if (_alfa>0){
+	if (_alfa>0 && (pkt.flags() & ECN_ECHO)){
 	    _cwnd = _cwnd * (1-_alfa/2);
 
 	    if (_cwnd<_mss)

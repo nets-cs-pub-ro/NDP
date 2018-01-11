@@ -130,7 +130,7 @@ TcpSrc::receivePacket(Packet& pkt)
     simtime_picosec ts;
     TcpAck *p = (TcpAck*)(&pkt);
     TcpAck::seq_t seqno = p->ackno();
-
+    bool marked=pkt.flags() & ECN_ECHO;
 #ifdef MODEL_RECEIVE_WINDOW
     if (_mSrc)
 	_mSrc->receivePacket(pkt);
@@ -218,7 +218,8 @@ TcpSrc::receivePacket(Packet& pkt)
       
 	    _last_acked = seqno;
 	    _dupacks = 0;
-	    inflate_window();
+	    if(!marked)
+	       inflate_window();
 
 	    if (_cwnd>_maxcwnd) {
 		_cwnd = _maxcwnd;
