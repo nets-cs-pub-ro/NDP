@@ -1,0 +1,15 @@
+#ifndef NDP_COMMON_DEBUG_CONFIG_H_
+#define NDP_COMMON_DEBUG_CONFIG_H_
+
+
+#ifdef NDP_EXTRA_DEBUG_CONFIG
+	#include NDP_EXTRA_DEBUG_CONFIG
+#endif
+
+
+#ifndef DEBUG_LEVEL
+  #define DEBUG_LEVEL 				0
+#endif
+
+
+#endif /* NDP_COMMON_DEBUG_CONFIG_H_ */

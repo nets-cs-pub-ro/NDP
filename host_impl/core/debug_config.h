@@ -1,0 +1,6 @@
+#ifndef NDP_CORE_DEBUG_CONFIG_H_
+#define NDP_CORE_DEBUG_CONFIG_H_
+
+
+
+#endif /* NDP_CORE_DEBUG_CONFIG_H_ */
