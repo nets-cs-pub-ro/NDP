@@ -1,0 +1,49 @@
+This quick'n'dirty guide will help you run the ping pong application on two arbitrary machines. The assumption is that you have two machines, henceforth called machine1 and machine2, each having a NIC dedicated solely to NDP traffic, henceforth referred to as nic1 and nic2. The two NICs must have L2 connectivity.
+
+Start off by following to a tee the instructions from README.md up to, but not including, the line that says "./usertools/dpdk-devbind.py --bind=uio_pci_generic eth0".
+
+On machine1 run:
+./usertools/dpdk-devbind.py --bind=uio_pci_generic $nic1
+
+On machine2 run:
+./usertools/dpdk-devbind.py --bind=uio_pci_generic $nic2
+
+Next, edit common/mac_db.c. There is a part that says:
+
+static const struct computer_mac_info cocos_mac_info [] =
+{
+		{0 , 2, { MAC6(a0, 36, 9f, 5f, db, c0), MAC6(a0, 36, 9f, 5f, db, c1)} },
+		{1 , 2, { MAC6(a0, 36, 9f, 5f, db, d0), MAC6(a0, 36, 9f, 5f, db, d1)} },
+
+Replace the MACs in the first column with the NICs' MACs. It should look something like:
+
+static const struct computer_mac_info cocos_mac_info [] =
+{
+		{0 , 2, { MAC6(<the MAC of nic1>), MAC6(a0, 36, 9f, 5f, db, c1)} },
+		{1 , 2, { MAC6(<the MAC of nic2>), MAC6(a0, 36, 9f, 5f, db, d1)} },
+
+Then edit lib/f_ndp_ping_pong.c. Replace the part that says
+
+#elif NDP_CURRENT_TEST_ENVIRONMENT == ENV_COCOS
+       char *destination_server = "10.0.0.6";
+
+with
+
+#elif NDP_CURRENT_TEST_ENVIRONMENT == ENV_COCOS
+       char *destination_server = "10.0.0.1";
+
+Next, we are going to run the ping pong server on machine1 (the two commands must be run in parallel):
+
+core/build/core 10.0.0.1
+lib/lib 1
+
+Likewise, we're going to run the client on machine2:
+
+core/build/core 10.0.0.2
+lib/lib 0
+
+That should be it. Now for an explanation of what we've done:
+
+The client implementation features hardcoded MAC tables, as well as a hardcoded ping-pong server IP. The IPs of the machines in the testbed are expected to be 10.0.0.$machine_no. The first machine_no is 1, and it corresponds to entry 0 in the MAC table. (2 corresponds to entry 1 etc.)
+
+In its current state, the code is set to use the "cocos" testbed. We've made it look like machine1 and machine2 are the first two machines in the testbed. Of course, a more elegant approach would be to pass MAC tables to the apps as command line parameters (as well as a destination IP to the client), but hey, I'm not the guy who wrote the code...
