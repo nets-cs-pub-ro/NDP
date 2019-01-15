@@ -397,10 +397,10 @@ int main(int argc, char **argv) {
 		const Route* rt = rts->at(0);
 		PacketSink* first_queue = rt->at(0);
 		//cout << "First hop: " << first_queue->nodename() << endl;
-		QueueLoggerSimple queue_logger = QueueLoggerSimple();
-		logfile.addLogger(queue_logger);
+		//QueueLoggerSimple queue_logger = QueueLoggerSimple();
+		//logfile.addLogger(queue_logger);
 		//if (ndpSnk->_log_me)
-		    ((Queue*)first_queue)->setLogger(&queue_logger);
+		//    ((Queue*)first_queue)->setLogger(&queue_logger);
 		//if (ndpSnk->_log_me)
 		    ndpSrc->set_traffic_logger(&traffic_logger);
 #endif
