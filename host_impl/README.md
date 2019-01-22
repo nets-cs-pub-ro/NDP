@@ -119,4 +119,4 @@ straightforward to follow. If something is missing/not really clear, please let 
 know.
 
 An alternative Getting Started guide written by Vlad Olteanu can be found here: 
-[https://github.com/nets-cs-pub-ro/NDP/blob/master/host_impl/how_to_get_it_running.txt]
+https://github.com/nets-cs-pub-ro/NDP/blob/master/host_impl/how_to_get_it_running.txt
