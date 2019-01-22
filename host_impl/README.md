@@ -117,3 +117,6 @@ pairs to stdout. They appear rather slowly because there are a couple of sleeps 
 code. Hopefully both the code of this example, and that from the others is relatively
 straightforward to follow. If something is missing/not really clear, please let me
 know.
+
+An alternative Getting Started guide written by Vlad Olteanu can be found here: 
+[https://github.com/nets-cs-pub-ro/NDP/blob/master/host_impl/how_to_get_it_running.txt]
