@@ -5,6 +5,7 @@
 class Packet;
 class TcpSrc;
 class NdpSrc;
+class NdpTunnelSrc;
 class NdpLiteSrc;
 class Queue;
 class QcnReactor;
@@ -101,6 +102,20 @@ class NdpLogger  : public Logger {
 
     virtual void logNdp(NdpSrc &src, NdpEvent ev) =0;
     virtual ~NdpLogger(){};
+};
+
+class NdpTunnelLogger  : public Logger {
+ public:
+    enum NdpEvent { NDP_RCV=0, NDP_RCV_FR_END=1, NDP_RCV_FR=2, NDP_RCV_DUP_FR=3,
+                    NDP_RCV_DUP=4, NDP_RCV_3DUPNOFR=5,
+                    NDP_RCV_DUP_FASTXMIT=6, NDP_TIMEOUT=7 };
+    enum NdpState { NDPSTATE_CNTRL=0, NDPSTATE_SEQ=1 };
+    enum NdpRecord { AVE_CWND=0 };
+    enum NdpSinkRecord { RATE = 0 };
+    enum NdpMemoryRecord  {MEMORY = 0};
+
+    virtual void logNdp(NdpTunnelSrc &src, NdpEvent ev) =0;
+    virtual ~NdpTunnelLogger(){};
 };
 
 class NdpLiteLogger  : public Logger {

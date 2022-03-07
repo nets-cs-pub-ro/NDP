@@ -39,7 +39,7 @@ class PacketFlow : public Logged {
 };
 
 
-typedef enum {IP, TCP, TCPACK, TCPNACK, NDP, NDPACK, NDPNACK, NDPPULL, NDPLITE, NDPLITEACK, NDPLITEPULL, NDPLITERTS, ETH_PAUSE} packet_type;
+typedef enum {IP, TCP, TCPACK, TCPNACK, NDP, NDPACK, NDPNACK, NDPPULL, NDPLITE, NDPLITEACK, NDPLITEPULL, NDPLITERTS, ETH_PAUSE, TOFINO_TRIM} packet_type;
 
 class VirtualQueue {
  public:
@@ -55,7 +55,7 @@ class Packet {
  public:
     /* empty constructor; Packet::set must always be called as
        well. It's a separate method, for convenient reuse */
-    Packet() {_is_header = false; _bounced = false; _type = IP; _flags = 0;}; 
+    Packet() {_is_header = false; _bounced = false; _type = IP; _flags = 0; _refcount = 0;}; 
 
     /* say "this packet is no longer wanted". (doesn't necessarily
        destroy it, so it can be reused) */
@@ -80,6 +80,9 @@ class Packet {
     virtual PacketSink* sendOn(); // "go on to the next hop along your route"
                                   // returns what that hop is
 
+    virtual PacketSink* previousHop() {if (_nexthop>=2) return _route->at(_nexthop-2); else return NULL;}
+    virtual PacketSink* currentHop() {if (_nexthop>=1) return _route->at(_nexthop-1); else return NULL;}
+    
     virtual PacketSink* sendOn2(VirtualQueue* crtSink);
 
     uint16_t size() const {return _size;}
@@ -99,11 +102,18 @@ class Packet {
     virtual void unbounce(uint16_t pktsize);
     inline uint32_t path_len() const {return _path_len;}
 
+    void inc_ref_count() { _refcount++;};
+    void dec_ref_count() { _refcount--;};
+    int ref_count() {return _refcount;};
+    
     inline uint32_t flags() const {return _flags;}
     inline void set_flags(uint32_t f) {_flags = f;}
 
     uint32_t nexthop() const {return _nexthop;} // only intended to be used for debugging
     void set_route(const Route &route);
+
+    //    void set_detour(PacketSink* n, int rewind) {_detour = n;_nexthop -= rewind;}
+    
     string str() const;
  protected:
     void set_route(PacketFlow& flow, const Route &route, 
@@ -116,15 +126,24 @@ class Packet {
     
     packet_type _type;
     
-    uint16_t _size;
+    uint16_t _size,_oldsize;
+    
+    
     bool _is_header;
     bool _bounced; // packet has hit a full queue, and is being bounced back to the sender
     uint32_t _flags; // used for ECN & friends
 
+    
+
     // A packet can contain a route or a routegraph, but not both.
     // Eventually switch over entirely to RouteGraph?
     const Route* _route;
-    uint32_t _nexthop;
+
+    //PacketSink* _detour;
+    uint32_t _nexthop,_oldnexthop;;
+
+    //used for tunneling purposes when one packet can be referenced by multiple classes
+    uint8_t _refcount;
 
     packetid_t _id;
     PacketFlow* _flow;
@@ -153,15 +172,22 @@ class PacketDB {
  public:
     P* allocPacket() {
 	if (_freelist.empty()) {
-	    return new P();
+	    P* p = new P();
+	    p->inc_ref_count();
+	    return p;
 	} else {
 	    P* p = _freelist.back();
 	    _freelist.pop_back();
+	    p->inc_ref_count();
 	    return p;
 	}
     };
     void freePacket(P* pkt) {
-	_freelist.push_back(pkt);
+	assert(pkt->ref_count()>=1);
+	pkt->dec_ref_count();
+
+	if (!pkt->ref_count())
+	    _freelist.push_back(pkt);
     };
 
  protected:
