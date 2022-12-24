@@ -1,3 +1,6 @@
+A simple cmd to start the NDP test.
+./htsim_ndp_incast_shortflows -o incast23_q8_c11_f450000 -conns 1 -nodes 16  -cwnd 23 -q 8 -strat perm -flowsize 10000
+
 It only is tested by W5. 
 
 
