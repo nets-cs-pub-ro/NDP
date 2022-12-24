@@ -109,6 +109,19 @@ void
 CompositeQueue::receivePacket(Packet& pkt)
 {
     pkt.flow().logTraffic(pkt,*this,TrafficLogger::PKT_ARRIVE);
+//Yanfang: The code below is used to test the RTS
+#if 0 
+if (!pkt.header_only() && _num_bounced <2){
+	pkt.strip_payload();
+	if (pkt.reverse_route()  && pkt.bounced() == false) {
+			pkt.bounce();
+			pkt.sendOn();
+			_num_bounced++;
+	}
+	return;
+}
+#endif
+
     if (!pkt.header_only()){
 	if (_queuesize_low+pkt.size() <= _maxsize  || drand()<0.5) {
 	    //regular packet; don't drop the arriving packet

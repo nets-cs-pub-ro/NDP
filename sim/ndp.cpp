@@ -61,7 +61,7 @@ NdpSrc::NdpSrc(NdpLogger* logger, TrafficLogger* pktlogger, EventList &eventlist
 
     _flight_size = 0;
 
-    _highest_sent = 0;
+    _highest_sent = 0; // the last bytes sent
     _last_acked = 0;
 
     _sink = 0;
@@ -277,8 +277,14 @@ bool NdpSrc::is_bad_path() {
 
 /* Process a return-to-sender packet */
 void NdpSrc::processRTS(NdpPacket& pkt){
+	//Yanfang	
+	cout << " processRTS "<< pkt.seqno() << endl;
+	int pkt_size = _mss;
+	if(pkt.seqno() + _mss -1 > _flow_size){
+		pkt_size = _flow_size - pkt.seqno() +1;
+	}
     assert(pkt.bounced());
-    pkt.unbounce(ACKSIZE + _mss);
+    pkt.unbounce(ACKSIZE + pkt_size);
     
     _sent_times.erase(pkt.seqno());
     //resend from front of RTX
@@ -608,6 +614,7 @@ void NdpSrc::send_packet(NdpPull::seq_t pacer_no) {
     } else {
 	// there are no packets in the RTX queue, so we'll send a new one
 	bool last_packet = false;
+	int pkt_size = _mss;
 	if (_flow_size) {
 	    if (_highest_sent >= _flow_size) {
 		/* we've sent enough new data. */
@@ -617,6 +624,7 @@ void NdpSrc::send_packet(NdpPull::seq_t pacer_no) {
 	    } 
 	    if (_highest_sent + _mss >= _flow_size) {
 		last_packet = true;
+		pkt_size = _flow_size - _highest_sent;
 	    }
 	}
 	switch (_route_strategy) {
@@ -631,14 +639,14 @@ void NdpSrc::send_packet(NdpPull::seq_t pacer_no) {
 	    */
 	    assert(_paths.size() > 0);
 	    const Route *rt = choose_route();
-	    p = NdpPacket::newpkt(_flow, *rt, _highest_sent+1, pacer_no, _mss, false,
+	    p = NdpPacket::newpkt(_flow, *rt, _highest_sent+1, pacer_no, pkt_size, false,
 				  _paths.size()>0?_paths.size():1, last_packet);
 	    _path_counts_new[p->path_id()]++;
 	    break;
 	}
 	case SINGLE_PATH:
 	    p = NdpPacket::newpkt(_flow, *_route, _highest_sent+1, pacer_no,
-				  _mss, false, 1,
+				  pkt_size, false, 1,
 				  last_packet);
 	    break;
 	case NOT_SET:
@@ -647,11 +655,11 @@ void NdpSrc::send_packet(NdpPull::seq_t pacer_no) {
 	p->flow().logTraffic(*p,*this,TrafficLogger::PKT_CREATESEND);
 	p->set_ts(eventlist().now());
     
-	_flight_size += _mss;
+	_flight_size += pkt_size;
 	// 	if (_log_me) {
 	// 	    cout << "Sent " << _highest_sent+1 << " FSz: " << _flight_size << endl;
 	// 	}
-	_highest_sent += _mss;  //XX beware wrapping
+	_highest_sent += pkt_size;  //XX beware wrapping
 	_packets_sent++;
 	_new_packets_sent++;
 
@@ -748,6 +756,10 @@ NdpSrc::retransmit_packet() {
     for (j = rtx_list.begin(); j != rtx_list.end(); j++) {
 	NdpPacket::seq_t seqno = *j;
 	bool last_packet = (seqno + _mss - 1) >= _flow_size;
+	int pkt_size = _mss;
+	if(last_packet){
+		pkt_size = _flow_size - seqno;
+	}
 	switch (_route_strategy) {
 	case SCATTER_PERMUTE:
 	case SCATTER_RANDOM:
@@ -755,7 +767,7 @@ NdpSrc::retransmit_packet() {
 	{
 	    assert(_paths.size() > 0);
 	    const Route* rt = _paths.at(_crt_path);
-	    p = NdpPacket::newpkt(_flow, *rt, seqno, 0, _mss, true,
+	    p = NdpPacket::newpkt(_flow, *rt, seqno, 0, pkt_size, true,
 				  _paths.size(), last_packet);
 	    if (_route_strategy == SCATTER_RANDOM) {
 		_crt_path = random() % _paths.size();
@@ -769,7 +781,7 @@ NdpSrc::retransmit_packet() {
 	    break;
 	}
 	case SINGLE_PATH:
-	    p = NdpPacket::newpkt(_flow, *_route, seqno, 0, _mss, true,
+	    p = NdpPacket::newpkt(_flow, *_route, seqno, 0, pkt_size, true,
 				  _paths.size(), last_packet);
 	    break;
 	case NOT_SET:
