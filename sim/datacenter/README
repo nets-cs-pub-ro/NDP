@@ -1,0 +1,20 @@
+It only is tested by W5. 
+
+
+To run W5 for NDP,
+Usage:
+./htsim_ndp_trace -nodes <node_num> -lf <load_factor> -incast <1 indicates incast traffic pattern; 0 indicates all-to-all traffic pattern> -seed <random seed> -dist DCTCP_MsgSizeDist.txt -strat perm   	
+example:
+./htsim_ndp_trace -nodes 10 -lf 50 -incast 1 -seed 2 -dist DCTCP_MsgSizeDist.txt -strat perm &> test
+
+
+Parsing the results:
+To parsing the results, use the following command:
+grep 'yle:' test 
+
+Then, it gets the following format results:
+#label message_size message_latency_in_us 
+yle: 1000500 201720 
+
+
+
