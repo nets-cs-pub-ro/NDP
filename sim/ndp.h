@@ -148,9 +148,11 @@ class NdpSrc : public PacketSink, public EventSource {
     static int _rtt_hist[10000000];
     int _node_num;
 
+	//yanfang
+    NdpLogger* _logger;
+    void retransmit_packet();
  private:
     // Housekeeping
-    NdpLogger* _logger;
     TrafficLogger* _pktlogger;
     // Connectivity
     PacketFlow _flow;
@@ -163,7 +165,6 @@ class NdpSrc : public PacketSink, public EventSource {
 
     // Mechanism
     void clear_timer(uint64_t start,uint64_t end);
-    void retransmit_packet();
     void permute_paths();
     void update_rtx_time();
     void process_cumulative_ack(NdpPacket::seq_t cum_ackno);
@@ -215,6 +216,10 @@ class NdpSink : public PacketSink, public DataReceiver, public Logged {
 #endif
     static RouteStrategy _route_strategy;
 
+	//yanfang
+	NdpPacket::seq_t _last_packet_seqno; //sequence number of the last
+                                         //packet in the connection (or 0 if not known)
+
  private:
  
     // Connectivity
@@ -236,8 +241,6 @@ class NdpSink : public PacketSink, public DataReceiver, public Logged {
  
     NdpPullPacer* _pacer;
     NdpPull::seq_t _pull_no; // pull sequence number (local to connection)
-    NdpPacket::seq_t _last_packet_seqno; //sequence number of the last
-                                         //packet in the connection (or 0 if not known)
     uint64_t _total_received;
  
     // Mechanism

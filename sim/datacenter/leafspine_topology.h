@@ -52,15 +52,15 @@ class LeafSpineTopology : public Topology
 
     // in all of the pairs below, pair.first is upward link and pair.second
     // is downward link
-    vector<pair<Pipe*, Pipe*>> pipes_srvr_tor;
-    vector<pair<Pipe*, Pipe*>> pipes_tor_aggr;
-    vector<pair<Pipe*, Pipe*>> pipes_aggr_core;
+    vector<pair<Pipe*, Pipe*> > pipes_srvr_tor;
+    vector<pair<Pipe*, Pipe*> > pipes_tor_aggr;
+    vector<pair<Pipe*, Pipe*> > pipes_aggr_core;
 
     // in all of the queues below, pair.first is upward queue and pair.second
     // is downward queue
-    vector<pair<Queue*, Queue*>> queues_srvr_tor;
-    vector<pair<Queue*, Queue*>> queues_tor_aggr;
-    vector<pair<Queue*, Queue*>> queues_aggr_core;
+    vector<pair<Queue*, Queue*> > queues_srvr_tor;
+    vector<pair<Queue*, Queue*> > queues_tor_aggr;
+    vector<pair<Queue*, Queue*> > queues_aggr_core;
 
     FirstFit* ff;
     Logfile* logfile;

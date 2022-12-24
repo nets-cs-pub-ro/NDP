@@ -166,7 +166,7 @@ NdpSinkPart::reset() {
 
 NdpLoadGen::NdpLoadGen(EventList& eventlist, int src,
         vector<NdpRecvrAggr*>* recvrAggrs, Topology* top, double lambda,
-        int cwnd, vector<pair<uint64_t, double>> *wl, Logfile* logfile,
+        int cwnd, vector<pair<uint64_t, double> > *wl, Logfile* logfile,
         NdpRtxTimerScanner* rtx, vector<const Route*>*** allRoutes, int is_incast)
     : EventSource(eventlist, "NdpLoadGen")
     , allNdpPairs(recvrAggrs->size(), NdpPairList())

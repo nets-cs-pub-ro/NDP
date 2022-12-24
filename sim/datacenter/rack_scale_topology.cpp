@@ -165,7 +165,8 @@ void RackScaleTopology::init_network(){
     //init thresholds for lossless operation
     if (qt==LOSSLESS || qt == GAZELLE)
 	for (int j=0;j<NK;j++){
-		switches_c[j]->configureConnected();
+		//yanfang
+		//switches_c[j]->configureConnected();
 	}
 }
 

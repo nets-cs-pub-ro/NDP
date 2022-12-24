@@ -237,6 +237,9 @@ main_ndp_outcast_shortflows.o: main_ndp_outcast_shortflows.cpp
 main_ndp_trace.o: main_ndp_trace.cpp ndp_pairs.cpp
 	$(CC) $(INCLUDE) $(CFLAGS) -c main_ndp_trace.cpp
 
+ndp_pairs.o: ndp_pairs.cpp ndp_pairs.h topology.h
+	$(CC) $(INCLUDE) $(CFLAGS) -c ndp_pairs.cpp
+
 leafspine_topology.o: leafspine_topology.cpp leafspine_topology.h topology.h
 	$(CC) $(INCLUDE) $(CFLAGS) -c leafspine_topology.cpp
 
