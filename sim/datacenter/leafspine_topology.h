@@ -40,6 +40,8 @@ class LinkRateEnum {
     static const LinkRateEnum TWENTYFIVE_G;//=25.0
     static const LinkRateEnum FOURTY_G;//=40.0
     static const LinkRateEnum HUNDRED_G;//=100.0
+    static const LinkRateEnum FOURHUNDRED_G;//=400.0
+
     operator float() const {return value;}
 } linkrates_t;
 

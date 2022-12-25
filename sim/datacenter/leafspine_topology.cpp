@@ -17,17 +17,18 @@ const LinkRateEnum LinkRateEnum::TEN_G(10.0f);
 const LinkRateEnum LinkRateEnum::TWENTYFIVE_G(25.0f);
 const LinkRateEnum LinkRateEnum::FOURTY_G(40.0f);
 const LinkRateEnum LinkRateEnum::HUNDRED_G(100.0f);
+const LinkRateEnum LinkRateEnum::FOURHUNDRED_G(400.0f);
 
-linkrates_t LeafSpineTopology::nicspd = linkrates_t::TEN_G;
-linkrates_t LeafSpineTopology::aggrspd = linkrates_t::FOURTY_G;
-linkrates_t LeafSpineTopology::corespd = linkrates_t::FOURTY_G;
+linkrates_t LeafSpineTopology::nicspd = linkrates_t::HUNDRED_G;
+linkrates_t LeafSpineTopology::aggrspd = linkrates_t::FOURHUNDRED_G;
+linkrates_t LeafSpineTopology::corespd = linkrates_t::FOURHUNDRED_G;
 
 double LeafSpineTopology::delayLeafUp = 1.0;
-double LeafSpineTopology::delayLeafDwn = 0.75;
-double LeafSpineTopology::delaySpineUp = 0.25;
-double LeafSpineTopology::delaySpineDwn = 0.25;
-double LeafSpineTopology::delayCoreUp = 0.25;
-double LeafSpineTopology::delayCoreDwn = 0.25;
+double LeafSpineTopology::delayLeafDwn = 1.0;
+double LeafSpineTopology::delaySpineUp = 1.0;
+double LeafSpineTopology::delaySpineDwn = 1.0;
+double LeafSpineTopology::delayCoreUp = 1.0;
+double LeafSpineTopology::delayCoreDwn = 1.0;
 
 
 string ntoa(double n);
@@ -89,6 +90,7 @@ LeafSpineTopology::set_params()
     }
 
     totalSrvrs = srvrsPerTor*torsPerPod*numPods;
+    cout<< " totalSrvrs " << totalSrvrs << endl;
 
 }
 
@@ -139,6 +141,8 @@ LeafSpineTopology::init_network()
 
         // aggregation switches and links/queues between aggregations switches
         // and tors.
+        cout << "allocate the aggregation switch "<<endl;
+        cout << " numAggrs " << numAggrs << " torsPerPod "<< torsPerPod << endl;
         for (size_t aggr_id = 0; aggr_id < numAggrs; aggr_id++) {
             if (qt == LOSSLESS) {
                 aggrs.push_back(new Switch(
@@ -177,6 +181,8 @@ LeafSpineTopology::init_network()
     }
 
     // core switches and links/queues between aggregation and core switches.
+    cout << " Allocate core switch "<< endl;
+    cout << " numCores " << numCores << " numPods " << numPods << endl;
     for (size_t core_id = 0; core_id < numCores; core_id++) {
         if (qt == LOSSLESS) {
             cores.push_back(new Switch("Switch_CORE_"+ntoa(core_id)));
