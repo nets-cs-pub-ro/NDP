@@ -4,6 +4,7 @@
 
 int msgNumber = 0;
 uint64_t total_message_size = 0;
+map<uint32_t, pair<uint64_t, uint64_t> > sender_tput;
 
 
 uint64_t NdpSrcPart::inflightMesgs = 0;
@@ -74,13 +75,15 @@ NdpSrcPart::receivePacket(Packet& pkt){
 	if (isActive){
         NdpSrc::receivePacket(pkt);
         if (_last_acked>=mesgSize){
-          cout << endl << "Mesg from src: " << str() << ", size: " <<  mesgSize
+          cout << endl << "Mesg from src: " << str() <<" id "<< loadGen->src  << ", size: " <<  mesgSize
           << ", started at: " << timeAsUs(started) << "us, finished after: " <<
           timeAsUs(eventlist().now()-started) << "us." << endl;
-          cout << endl << "yle: " << mesgSize <<" "<< timeAsUs(eventlist().now()-started) << endl;
+          cout << endl << "yle: message " << mesgSize <<" "<< timeAsUs(eventlist().now()-started) <<" us" << endl;
+          sender_tput[loadGen->src] = make_pair(sender_tput[loadGen->src].first + mesgSize, sender_tput[loadGen->src].second) ;
+          cout << "yle: node "<< loadGen->src  <<" tput: " <<  sender_tput[loadGen->src].first*8.0 /(timeAsMs(eventlist().now()- sender_tput[loadGen->src].second*1000))/1000000 << "Gbps " << endl;
           total_message_size += mesgSize;
-          cout<< "current_tput=" << total_message_size*8.0/(timeAsMs(eventlist().now())-10)/1000000 << "Gbps " << endl;
-	  	    NdpSrcPart::inflightMesgs--;
+          cout<< "current_tput=" << total_message_size*8.0/(timeAsMs(eventlist().now()))/1000000 << "Gbps " << endl;
+	  	  NdpSrcPart::inflightMesgs--;
           reset(0, 0);
         }
     }
@@ -182,6 +185,24 @@ NdpLoadGen::NdpLoadGen(EventList& eventlist, int src,
 	, is_incast(is_incast)
 {
     eventlist.sourceIsPendingRel(*this, timeFromMs(10));
+}
+
+NdpLoadGen::NdpLoadGen(EventList& eventlist, int src,
+        vector<NdpRecvrAggr*>* recvrAggrs, Topology* top, 
+        int cwnd, Logfile* logfile,
+        NdpRtxTimerScanner* rtx, vector<const Route*>*** allRoutes)
+    : EventSource(eventlist, "NdpLoadGen")
+    , allNdpPairs(recvrAggrs->size(), NdpPairList())
+    , src(src)
+    , recvrAggrs(recvrAggrs)
+    , topo(top)
+    , cwnd(cwnd)
+    , logfile(logfile)
+    , ndpRtxScanner(rtx)
+    , allRoutes(allRoutes)
+{
+    // cout << " NdpLoadGen " << src << endl;
+    //eventlist.sourceIsPendingRel(*this, timeFromMs(10));
 }
 
 uint64_t
@@ -327,6 +348,80 @@ NdpLoadGen::printAllActive()
 //        topo->print_path(std::cout, src, paths->at(i));
 //    }
 //}
+
+NdpReadTrace::NdpReadTrace(EventList& eventlist, int src,
+        vector<NdpRecvrAggr*>* recvrAggrs, Topology* top,
+        int cwnd, Logfile* logfile,
+        NdpRtxTimerScanner* rtx, vector<const Route*>*** allRoutes, string flow_file)
+    : NdpLoadGen(eventlist, src, recvrAggrs, top, cwnd, logfile, rtx, allRoutes)
+    , flowfile(flow_file)
+{
+    flowf.open(flow_file.c_str());
+    flow_idx = 0;
+    flowf >> flow_num;
+    // cout << " flow file: " << flow_file.c_str() << " flow_num: " << flow_num << endl;
+    eventlist.sourceIsPendingRel(*this, timeFromMs(0));
+}
+
+void
+NdpReadTrace::doNextEvent()
+{
+  if (msgNumber > flow_num) {
+    return;
+  }
+  run();
+
+  
+}
+
+void
+NdpReadTrace::run()
+{
+    uint32_t source, dest, pg, dport, messageSize;
+    uint64_t start_time_ns;
+    while(source != src && flow_idx < flow_num){
+        flowf >> source >> dest >> pg >> dport >> messageSize >> start_time_ns;
+        flow_idx ++;
+    }
+    if(flow_idx == flow_num && source != src){
+        cout<< " src node " << src << " msgNumber " << msgNumber <<endl;
+        return;
+    }
+    msgNumber++;
+    if (sender_tput.find(src) == sender_tput.end()){
+        sender_tput[src] = make_pair(0, timeFromNs(start_time_ns));
+    }
+    simtime_picosec nextArrival =  timeFromNs(start_time_ns) - eventlist().now();
+    cout <<"src "<< src <<" source "<< source << " dest " << dest 
+        << " msg " << messageSize << " start_time (us) " << start_time_ns 
+        <<" nextArrival " << nextArrival
+        <<endl;
+    //look for inactive connection
+    NdpPairList& ndpPairs = allNdpPairs[dest];
+    NdpPair ndpPair;
+    NdpPairList::iterator it;
+    for (it=ndpPairs.begin(); it != ndpPairs.end(); it++) {
+        ndpPair =  *it;
+        if (!ndpPair.first->isActive) {
+            break;
+        }
+    }
+
+    if (it != ndpPairs.end()) {
+        ndpPairs.erase(it);
+        ndpPairs.push_back(ndpPair);
+    } else {
+        ndpPair = createConnection(dest);
+    }
+    ndpPair.first->reset(messageSize, true);
+    if(timeFromNs(start_time_ns) < eventlist().now()){
+        cerr << "The next message should start "<< start_time_ns << "ns, but read at " << eventlist().now()/1000
+            << "ns \n";
+        exit(1);
+    }
+    
+    eventlist().sourceIsPendingRel(*this, nextArrival); 
+}
 
 NdpRecvrAggr::NdpRecvrAggr(EventList& eventlist, int dest, NdpPullPacer* pacer)
     : EventSource(eventlist, "NdpRecvrAggr")

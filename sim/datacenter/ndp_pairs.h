@@ -92,6 +92,10 @@ class NdpLoadGen : public EventSource {
         Topology* top, double lambda, int cwnd,
         vector<pair<uint64_t, double> > *wl, Logfile* logfile,
         NdpRtxTimerScanner* rtx, vector<const Route*>*** allRoutes, int is_incast);
+    NdpLoadGen(EventList& eventlist, int src,
+        vector<NdpRecvrAggr*>* recvrAggrs, Topology* top, 
+        int cwnd, Logfile* logfile,
+        NdpRtxTimerScanner* rtx, vector<const Route*>*** allRoutes);
     ~NdpLoadGen(){}
     virtual void doNextEvent();
     void run();
@@ -115,5 +119,21 @@ class NdpLoadGen : public EventSource {
     static int initConn;
 	int is_incast;
 }; //class NdpLoadGen
+
+class NdpReadTrace : public NdpLoadGen {
+  public:
+    NdpReadTrace(EventList& eventlist, int src, vector<NdpRecvrAggr*> *recvrAggrs,
+        Topology* top, int cwnd, Logfile* logfile,
+        NdpRtxTimerScanner* rtx, vector<const Route*>*** allRoutes, string flowfile);
+    ~NdpReadTrace(){}
+    virtual void doNextEvent();
+    void run();
+
+    string flowfile;
+    uint32_t flow_num;
+    ifstream flowf;
+    uint32_t flow_idx;
+
+}; //class NdpReadTrace
 
 #endif //END NDP_PAIRS_H
