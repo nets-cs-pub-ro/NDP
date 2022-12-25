@@ -34,7 +34,7 @@
 uint32_t RTT = 1; // this is per link delay in us; also check the topology file, where it interprets this value. identical RTT microseconds = 0.02 ms
 //double RTT = .2; // this is per link delay in us; identical RTT microseconds = 0.012 ms
 #define DEFAULT_NODES 128
-#define DEFAULT_QUEUE_SIZE 8
+#define DEFAULT_QUEUE_SIZE 25
 
 FirstFit* ff = NULL;
 unsigned int subflow_count = 1;
@@ -190,8 +190,8 @@ int main(int argc, char **argv) {
 
 
 #ifdef LEAF_SPINE_H
-    int srvrsPerTor = 16;
-    int torsPerPod = 9;
+    int srvrsPerTor = 32; //16
+    int torsPerPod = 16;  //9
     int numPods = 1;
     LeafSpineTopology* top = new LeafSpineTopology(srvrsPerTor, torsPerPod,
         numPods, queuesize, &logfile, &eventlist, ff, COMPOSITE);
