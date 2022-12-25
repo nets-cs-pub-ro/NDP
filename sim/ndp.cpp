@@ -280,7 +280,7 @@ void NdpSrc::processRTS(NdpPacket& pkt){
 	//Yanfang	
 	cout << " processRTS "<< pkt.seqno() << endl;
 	int pkt_size = _mss;
-	if(pkt.seqno() + _mss -1 > _flow_size){
+	if(pkt.seqno() + _mss -1 >= _flow_size){
 		pkt_size = _flow_size - pkt.seqno() +1;
 	}
     assert(pkt.bounced());
@@ -341,11 +341,15 @@ void NdpSrc::processNack(const NdpNack& nack){
 */
     
     bool last_packet = (nack.ackno() + _mss - 1) >= _flow_size;
+	int pkt_size = _mss;
+	if(last_packet){
+		pkt_size = _flow_size - nack.ackno() +1;
+	}
     _sent_times.erase(nack.ackno());
 
     count_nack(nack.path_id());
 
-    p = NdpPacket::newpkt(_flow, *_route, nack.ackno(), 0, _mss, true,
+    p = NdpPacket::newpkt(_flow, *_route, nack.ackno(), 0, pkt_size, true,
 			  _paths.size()>0?_paths.size():1, last_packet);
     
     // need to add packet to rtx queue
@@ -422,7 +426,15 @@ void NdpSrc::processAck(const NdpAck& ack) {
     }
     if (_logger) _logger->logNdp(*this, NdpLogger::NDP_RCV);
 
+	int pkt_size = _mss;
+	if(ackno+_mss -1 >= _flow_size){
+		pkt_size = _flow_size - ackno +1 ;
+	}
+	cout << "_fligt_size " << _flight_size << " mss " << _mss << " pkt_size " << pkt_size << " ackno "<< ackno << endl;
+	assert(_flight_size >= pkt_size);
     _flight_size -= _mss;
+	//yanfang: this assert would never happen, because _flight_size is an uint_32, it is always >=0;
+	//Need fix
     assert(_flight_size>=0);
 
     if (cum_ackno >= _flow_size){
@@ -758,7 +770,7 @@ NdpSrc::retransmit_packet() {
 	bool last_packet = (seqno + _mss - 1) >= _flow_size;
 	int pkt_size = _mss;
 	if(last_packet){
-		pkt_size = _flow_size - seqno;
+		pkt_size = _flow_size - seqno + 1;
 	}
 	switch (_route_strategy) {
 	case SCATTER_PERMUTE:
@@ -1199,7 +1211,7 @@ int NdpPullPacer::_pull_spacing_cdf_count = 0;
 NdpPullPacer::NdpPullPacer(EventList& event, double pull_rate_modifier)  : 
     EventSource(event, "ndp_pacer"), _last_pull(0)
 {
-    _packet_drain_time = (simtime_picosec)(Packet::data_packet_size() * (pow(10.0,12.0) * 8) / speedFromMbps((uint64_t)10000))/pull_rate_modifier;
+    _packet_drain_time = (simtime_picosec)(Packet::data_packet_size() * (pow(10.0,12.0) * 8) / speedFromMbps((uint64_t)HOST_NIC))/pull_rate_modifier;
     _log_me = false;
     _pacer_no = 0;
 }
