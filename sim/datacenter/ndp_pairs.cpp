@@ -81,9 +81,11 @@ NdpSrcPart::receivePacket(Packet& pkt){
         //   timeAsUs(eventlist().now()-started) << "us." << " experience " <<(pkt.route()->size() -1) << " us"<< endl;
           //total bytes including headers
           uint64_t total_bytes_per_message = (mesgSize/_mss)*(_mss+ACKSIZE) + (mesgSize%_mss > 0 ? 1: 0)*(mesgSize%_mss + ACKSIZE);
-          float ideal_fct = pkt.route()->size() -1 + total_bytes_per_message*8.0/100000;
+          //nanosecond
+          float ideal_fct = (pkt.route()->size() -1)*1000 + total_bytes_per_message*8.0/100;
+          //nanosecond
           double fct = timeAsNs(eventlist().now() - started);
-          float slowdown = timeAsUs(eventlist().now()-started)/ideal_fct;
+          float slowdown = timeAsNs(eventlist().now()-started)/ideal_fct;
           // sip, dip, sport, dport, size (B), start_time, fct (ns), standalone_fct (ns), qid, appid
           cout << loadGen->src <<" dip sport dport "<< mesgSize <<" "<< timeAsNs(started) <<" "<< fct <<" "<< ideal_fct<< " yle yle" <<endl;
           sender_tput[loadGen->src] = make_pair(sender_tput[loadGen->src].first + mesgSize, sender_tput[loadGen->src].second) ;
