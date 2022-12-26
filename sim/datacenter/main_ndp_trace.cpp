@@ -34,7 +34,7 @@
 uint32_t RTT = 1; // this is per link delay in us; also check the topology file, where it interprets this value. identical RTT microseconds = 0.02 ms
 //double RTT = .2; // this is per link delay in us; identical RTT microseconds = 0.012 ms
 #define DEFAULT_NODES 128
-#define DEFAULT_QUEUE_SIZE 25
+#define DEFAULT_QUEUE_SIZE 8
 
 FirstFit* ff = NULL;
 unsigned int subflow_count = 1;
