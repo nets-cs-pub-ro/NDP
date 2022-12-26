@@ -368,6 +368,8 @@ void NdpSrc::processAck(const NdpAck& ack) {
     NdpAck::seq_t pacerno = ack.pacerno();
     NdpAck::seq_t pullno = ack.pullno();
     NdpAck::seq_t cum_ackno = ack.cumulative_ack();
+	// cout << " processAck "<<eventlist().now() <<" ackno " << ackno << " cum_ackno "<< cum_ackno << endl;
+
     bool pull = ack.pull();
     if (pull) {
 	if (_log_me)
@@ -429,10 +431,9 @@ void NdpSrc::processAck(const NdpAck& ack) {
 	int pkt_size = _mss;
 	if(ackno+_mss -1 >= _flow_size){
 		pkt_size = _flow_size - ackno +1 ;
-	}
-	cout << "_fligt_size " << _flight_size << " mss " << _mss << " pkt_size " << pkt_size << " ackno "<< ackno << endl;
+	}	
 	assert(_flight_size >= pkt_size);
-    _flight_size -= _mss;
+    _flight_size -= pkt_size;
 	//yanfang: this assert would never happen, because _flight_size is an uint_32, it is always >=0;
 	//Need fix
     assert(_flight_size>=0);
@@ -666,11 +667,16 @@ void NdpSrc::send_packet(NdpPull::seq_t pacer_no) {
 	}
 	p->flow().logTraffic(*p,*this,TrafficLogger::PKT_CREATESEND);
 	p->set_ts(eventlist().now());
-    
+
 	_flight_size += pkt_size;
+	// cout << " send_packet "<<eventlist().now() <<" pkt_size " << pkt_size <<" _flight_size "<<_flight_size << endl;
+
 	// 	if (_log_me) {
 	// 	    cout << "Sent " << _highest_sent+1 << " FSz: " << _flight_size << endl;
 	// 	}
+	// print_route(*(p->route()));
+	// cout << "_highest_sent "<< _highest_sent <<" " << p->route()->size() << endl;
+
 	_highest_sent += pkt_size;  //XX beware wrapping
 	_packets_sent++;
 	_new_packets_sent++;
