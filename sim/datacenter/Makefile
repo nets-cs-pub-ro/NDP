@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS="-Wall -g "
+CFLAGS= -Wall -g 
 CRT=`pwd`
 INCLUDE= -I/$(CRT)/.. -I$(CRT) 
 #-I$(CRT)/ksp -I$(CRT)/ksp/boost

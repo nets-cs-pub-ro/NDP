@@ -123,13 +123,15 @@ if (!pkt.header_only() && _num_bounced <2){
 #endif
 
     if (!pkt.header_only()){
-	if (_queuesize_low+pkt.size() <= _maxsize  || drand()<0.5) {
+//yanfang: hardcode, disable the random drop, 
+//because it assumes that the every packet is the same size
+	if (_queuesize_low+pkt.size() <= _maxsize  ) { //|| drand()<0.5
 	    //regular packet; don't drop the arriving packet
 
 	    // we are here because either the queue isn't full or,
 	    // it might be full and we randomly chose an
 	    // enqueued packet to trim
-	    
+#if 0	    
 	    if (_queuesize_low+pkt.size()>_maxsize){
 		// we're going to drop an existing packet from the queue
 		if (_enqueued_low.empty()){
@@ -141,7 +143,6 @@ if (!pkt.header_only() && _num_bounced <2){
 		Packet* booted_pkt = _enqueued_low.front();
 		_enqueued_low.pop_front();
 		_queuesize_low -= booted_pkt->size();
-
 		//cout << "A [ " << _enqueued_low.size() << " " << _enqueued_high.size() << " ] STRIP" << endl;
 		//cout << "booted_pkt->size(): " << booted_pkt->size();
 		booted_pkt->strip_payload();
@@ -181,7 +182,7 @@ if (!pkt.header_only() && _num_bounced <2){
 		    _queuesize_high += booted_pkt->size();
 		}
 	    }
-	    
+#endif 
 	    assert(_queuesize_low+pkt.size()<= _maxsize);
 	    
 	    _enqueued_low.push_front(&pkt);
