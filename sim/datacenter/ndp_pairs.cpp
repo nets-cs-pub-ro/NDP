@@ -12,7 +12,7 @@ int NdpSrcPart::lastLogTime = 0;
 int NdpLoadGen::initConn = 30;
 //int NdpLoadGen::initConn = 1;
 
-static int message_generated = 0;
+// static int message_generated = 0;
 NdpSrcPart::NdpSrcPart(NdpLogger* logger, TrafficLogger* pktLogger,
         EventList &eventlist, NdpLoadGen* owner)
     : NdpSrc(logger,pktLogger,eventlist)
@@ -75,10 +75,17 @@ NdpSrcPart::receivePacket(Packet& pkt){
 	if (isActive){
         NdpSrc::receivePacket(pkt);
         if (_last_acked>=mesgSize){
-          cout << endl << "Mesg from src: " << str() <<" id "<< loadGen->src  << ", size: " <<  mesgSize
-          << ", started at: " << timeAsUs(started) << "us, finished after: " <<
-          timeAsUs(eventlist().now()-started) << "us." << endl;
-          cout << endl << "yle: message " << mesgSize <<" "<< timeAsUs(eventlist().now()-started) <<" us" << endl;
+        //   print_route(*(pkt.route()));
+        //   cout << endl << "Mesg from src: " << str() <<" id "<< loadGen->src  << ", size: " <<  mesgSize
+        //   << ", started at: " << timeAsUs(started) << "us, finished after: " <<
+        //   timeAsUs(eventlist().now()-started) << "us." << " experience " <<(pkt.route()->size() -1) << " us"<< endl;
+          //total bytes including headers
+          uint64_t total_bytes_per_message = (mesgSize/_mss)*(_mss+ACKSIZE) + (mesgSize%_mss > 0 ? 1: 0)*(mesgSize%_mss + ACKSIZE);
+          float ideal_fct = pkt.route()->size() -1 + total_bytes_per_message*8.0/100000;
+          double fct = timeAsNs(eventlist().now() - started);
+          float slowdown = timeAsUs(eventlist().now()-started)/ideal_fct;
+          // sip, dip, sport, dport, size (B), start_time, fct (ns), standalone_fct (ns), qid, appid
+          cout << loadGen->src <<" dip sport dport "<< mesgSize <<" "<< timeAsNs(started) <<" "<< fct <<" "<< ideal_fct<< " yle yle" <<endl;
           sender_tput[loadGen->src] = make_pair(sender_tput[loadGen->src].first + mesgSize, sender_tput[loadGen->src].second) ;
           cout << "yle: node "<< loadGen->src  <<" tput: " <<  sender_tput[loadGen->src].first*8.0 /(timeAsMs(eventlist().now()- sender_tput[loadGen->src].second*1000))/1000000 << "Gbps " << endl;
           total_message_size += mesgSize;
@@ -377,14 +384,15 @@ NdpReadTrace::doNextEvent()
 void
 NdpReadTrace::run()
 {
-    uint32_t source, dest, pg, dport, messageSize;
+    uint32_t dest, pg, dport, messageSize;
+    int source = -1;
     uint64_t start_time_ns;
     while(source != src && flow_idx < flow_num){
         flowf >> source >> dest >> pg >> dport >> messageSize >> start_time_ns;
         flow_idx ++;
     }
     if(flow_idx == flow_num && source != src){
-        cout<< " src node " << src << " msgNumber " << msgNumber <<endl;
+        // cout<< " src node " << src << " msgNumber " << msgNumber <<endl;
         return;
     }
     msgNumber++;
