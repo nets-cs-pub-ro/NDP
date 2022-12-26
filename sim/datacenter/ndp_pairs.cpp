@@ -278,11 +278,16 @@ NdpLoadGen::createConnection(int dest)
         Route* routein = new Route(*(allRoutes[dest][src]->at(choice)));
         routein->push_back(ndpSrc);
 
+        if(NdpSrc::_route_strategy == SINGLE_PATH){
+            routeout->set_path_id(0,1);
+            routein->set_path_id(0,1);
+        }
         ndpSrc->connect(*routeout, *routein, *ndpSnk, eventlist().now());
         if (NdpSrc::_route_strategy != SINGLE_PATH && NdpSrc::_route_strategy != NOT_SET){
             ndpSrc->set_paths(allRoutes[src][dest]);
             ndpSnk->set_paths(allRoutes[dest][src]);
         }
+
         pairList.push_back(make_pair(ndpSrc, ndpSnk));
     } while (pairList.size() < initConn);
     return allNdpPairs[dest].back();
