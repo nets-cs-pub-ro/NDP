@@ -61,7 +61,7 @@ uint16_t loadFactor = 65; // load factor in percent
 
 int main(int argc, char **argv) {
     Packet::set_packet_size(9000);
-    eventlist.setEndtime(timeFromSec(40.0));
+    eventlist.setEndtime(timeFromSec(4.0));
     Clock c(timeFromSec(5 / 100.), eventlist);
     uint32_t no_of_conns = DEFAULT_NODES, cwnd = 15, no_of_nodes = DEFAULT_NODES;
     mem_b queuesize = memFromPkt(DEFAULT_QUEUE_SIZE);
