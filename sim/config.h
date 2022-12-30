@@ -22,8 +22,6 @@ typedef signed __int64 sint64_t;
 typedef long long sint64_t;
 #endif
 
-//Yanfang
-#define HOST_NIC 10000 // host nic speed in Mbps
 
 // Specify units for simulation time, link speed, buffer capacity
 typedef uint64_t simtime_picosec;

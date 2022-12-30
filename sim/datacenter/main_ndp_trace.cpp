@@ -61,7 +61,7 @@ uint16_t loadFactor = 65; // load factor in percent
 
 int main(int argc, char **argv) {
     Packet::set_packet_size(1442);
-    eventlist.setEndtime(timeFromSec(5.0));
+    eventlist.setEndtime(timeFromSec(40.0));
     Clock c(timeFromSec(5 / 100.), eventlist);
     uint32_t no_of_conns = DEFAULT_NODES, cwnd = 32, no_of_nodes = DEFAULT_NODES;
     mem_b queuesize = memFromPkt(DEFAULT_QUEUE_SIZE);
@@ -190,8 +190,8 @@ int main(int argc, char **argv) {
 
 
 #ifdef LEAF_SPINE_H
-    int srvrsPerTor = 16; //32; //16
-    int torsPerPod = 9; //16;  //9
+    int srvrsPerTor =32; //32; //16
+    int torsPerPod = 16; //16;  //9
     int numPods = 1;
     LeafSpineTopology* top = new LeafSpineTopology(srvrsPerTor, torsPerPod,
         numPods, queuesize, &logfile, &eventlist, ff, COMPOSITE);
@@ -236,7 +236,7 @@ int main(int argc, char **argv) {
     vector<NdpRecvrAggr*> recvrAggrs;
     vector<NdpPullPacer*> pacers;
     for (size_t node = 0; node < no_of_nodes; node++) {
-	    pacers.push_back(new NdpPullPacer(eventlist, 1));
+	    pacers.push_back(new NdpPullPacer(eventlist, HOST_NIC));
         recvrAggrs.push_back(new NdpRecvrAggr(eventlist, node, pacers.back()));
     }
 	size_t node = 0;

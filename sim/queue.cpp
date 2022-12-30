@@ -237,7 +237,15 @@ PriorityQueue::completeService()
     _queuesize[_servicing] -= pkt->size();
     pkt->flow().logTraffic(*pkt, *this, TrafficLogger::PKT_DEPART);
     if (_logger) _logger->logQueue(*this, QueueLogger::PKT_SERVICE, *pkt);
-
+	
+    NdpPacket *ndppkt = (NdpPacket*)pkt;
+    bool last_packet = ndppkt->last_packet();
+    
+	if(ndppkt->seqno() == 1 &&   pkt->size()==(1442+ACKSIZE) && ndppkt->retransmitted() == false){ //last_packet &&
+		ndppkt->set_ts(eventlist().now());
+        if(last_packet)
+            cout << "reset ts " << pkt->flow_id() <<" " << eventlist().now()  << " " <<pkt->size() << endl;
+	}
     /* tell the packet to move on to the next pipe */
     pkt->sendOn();
 

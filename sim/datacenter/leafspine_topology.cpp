@@ -19,9 +19,9 @@ const LinkRateEnum LinkRateEnum::FOURTY_G(40.0f);
 const LinkRateEnum LinkRateEnum::HUNDRED_G(100.0f);
 const LinkRateEnum LinkRateEnum::FOURHUNDRED_G(400.0f);
 
-linkrates_t LeafSpineTopology::nicspd = linkrates_t::TEN_G;
-linkrates_t LeafSpineTopology::aggrspd = linkrates_t::FOURTY_G;
-linkrates_t LeafSpineTopology::corespd = linkrates_t::FOURTY_G;
+linkrates_t LeafSpineTopology::nicspd = linkrates_t::HUNDRED_G;
+linkrates_t LeafSpineTopology::aggrspd = linkrates_t::FOURHUNDRED_G;
+linkrates_t LeafSpineTopology::corespd = linkrates_t::FOURHUNDRED_G;
 
 // double LeafSpineTopology::delayLeafDwn = 0.75;
 // double LeafSpineTopology::delaySpineUp = 0.25;
@@ -158,8 +158,8 @@ LeafSpineTopology::init_network()
 
             for (size_t tor_id = 0; tor_id < torsPerPod; tor_id++) {
                  pipes_tor_aggr.push_back(make_pair(
-                    new Pipe(timeFromUs(delayLeafUp), *eventlist),
-                    new Pipe(timeFromUs(delayLeafDwn), *eventlist)));
+                    new Pipe(timeFromUs(delaySpineUp), *eventlist),
+                    new Pipe(timeFromUs(delaySpineDwn), *eventlist)));
 
                 qLoggerUp = new QueueLoggerSampling(timeFromMs(100),
                     *eventlist);

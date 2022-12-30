@@ -463,7 +463,7 @@ void NdpSrc::receivePacket(Packet& pkt)
 	    _bounces_received++;
 	    _first_window_count--;
 	    processRTS((NdpPacket&)pkt);
-		if(_flow_size == 5768)
+		if(_flow_size == 1442)
 			cout << " recv_packet "<<eventlist().now() <<" type " << pkt.type() << " " << ((NdpPacket&)pkt).seqno() <<" " << pkt.flow_id() << endl;
 	    return;
 	}
@@ -478,7 +478,7 @@ void NdpSrc::receivePacket(Packet& pkt)
 		printf("NACK\n");
 	    }*/
 	    processNack((const NdpNack&)pkt);
-		if(_flow_size == 5768)
+		if(_flow_size == 1442)
 			cout << " recv_packet "<<eventlist().now() <<" type " << pkt.type() << " " << ((NdpNack&)pkt).ackno() <<" " << pkt.flow_id() << endl;
 	    pkt.free();
 	    return;
@@ -500,7 +500,7 @@ void NdpSrc::receivePacket(Packet& pkt)
 	  
 	    }
 	    //printf("Receive PULL: %s\n", p->pull_bitmap().to_string().c_str());
-		if(_flow_size == 5768)
+		if(_flow_size == 1442)
 			cout << " recv_packet "<<eventlist().now() <<" type " << pkt.type() << " " << p->ackno() <<" " << pkt.flow_id() << endl;
 	    pull_packets(p->pullno(), p->pacerno());
 	    return;
@@ -513,7 +513,7 @@ void NdpSrc::receivePacket(Packet& pkt)
 	    //	    if (_log_me) {
 	    //	printf("ACK, pw=%d\n", _pull_window);
 	    //}
-		if(_flow_size == 5768)
+		if(_flow_size == 1442)
 			cout << " recv_packet "<<eventlist().now() <<" type " << pkt.type() << " " << ((NdpAck&)pkt).ackno() <<" " << pkt.flow_id() << endl;
 	    processAck((const NdpAck&)pkt);
 	    pkt.free();
@@ -617,7 +617,7 @@ void NdpSrc::send_packet(NdpPull::seq_t pacer_no) {
 	    p->set_route(*rt);
 	    _path_counts_rtx[p->path_id()]++;
 	}
-	if(_flow_size == 5768)
+	if(_flow_size == 1442)
 		cout << " rtx send_packet "<<eventlist().now() <<" pkt_size " << p->size() <<" _flight_size "<<_flight_size << " " << p->seqno() <<" " << p->flow_id() << endl;	
 	PacketSink* sink = p->sendOn();
 	PriorityQueue *q = dynamic_cast<PriorityQueue*>(sink);
@@ -681,7 +681,7 @@ void NdpSrc::send_packet(NdpPull::seq_t pacer_no) {
 	p->set_ts(eventlist().now());
 
 	_flight_size += pkt_size;
-	if(_flow_size == 5768)
+	if(_flow_size == 1442)
 		cout << " send_packet "<<eventlist().now() <<" pkt_size " << pkt_size <<" _flight_size "<<_flight_size << " " << p->seqno() <<" " << p->flow_id() << endl;
 
 
@@ -1228,10 +1228,21 @@ int NdpPullPacer::_pull_spacing_cdf_count = 0;
 /* Every NdpSink needs an NdpPullPacer to pace out it's PULL packets.
    Multiple incoming flows at the same receiving node much share a
    single pacer */
+NdpPullPacer::NdpPullPacer(EventList& event, uint64_t bwMbps) : 
+    EventSource(event, "ndp_pacer"), _last_pull(0)
+{
+    _packet_drain_time = (simtime_picosec)(Packet::data_packet_size() * (pow(10.0,12.0) * 8) / speedFromMbps((uint64_t)bwMbps));
+	cout << "_packet_drain_time  " << _packet_drain_time << " ps " << Packet::data_packet_size()*8.0*1000/10 << endl;
+    _log_me = false;
+    _pacer_no = 0;
+}
+
+
 NdpPullPacer::NdpPullPacer(EventList& event, double pull_rate_modifier)  : 
     EventSource(event, "ndp_pacer"), _last_pull(0)
 {
-    _packet_drain_time = (simtime_picosec)(Packet::data_packet_size() * (pow(10.0,12.0) * 8) / speedFromMbps((uint64_t)HOST_NIC))/pull_rate_modifier;
+	//Yanfang: assume 10Gpbs receiver
+    _packet_drain_time = (simtime_picosec)(Packet::data_packet_size() * (pow(10.0,12.0) * 8) / speedFromMbps((uint64_t)10000))/pull_rate_modifier;
 	cout << "_packet_drain_time  " << _packet_drain_time << " ps " << Packet::data_packet_size()*8.0*1000/10 << endl;
     _log_me = false;
     _pacer_no = 0;
