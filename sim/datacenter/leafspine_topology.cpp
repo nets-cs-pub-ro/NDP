@@ -19,10 +19,15 @@ const LinkRateEnum LinkRateEnum::FOURTY_G(40.0f);
 const LinkRateEnum LinkRateEnum::HUNDRED_G(100.0f);
 const LinkRateEnum LinkRateEnum::FOURHUNDRED_G(400.0f);
 
-linkrates_t LeafSpineTopology::nicspd = linkrates_t::HUNDRED_G;
-linkrates_t LeafSpineTopology::aggrspd = linkrates_t::FOURHUNDRED_G;
-linkrates_t LeafSpineTopology::corespd = linkrates_t::FOURHUNDRED_G;
+linkrates_t LeafSpineTopology::nicspd = linkrates_t::TEN_G;
+linkrates_t LeafSpineTopology::aggrspd = linkrates_t::FOURTY_G;
+linkrates_t LeafSpineTopology::corespd = linkrates_t::FOURTY_G;
 
+// double LeafSpineTopology::delayLeafDwn = 0.75;
+// double LeafSpineTopology::delaySpineUp = 0.25;
+// double LeafSpineTopology::delaySpineDwn = 0.25;
+// double LeafSpineTopology::delayCoreUp = 0.25;
+// double LeafSpineTopology::delayCoreDwn = 0.25;
 double LeafSpineTopology::delayLeafUp = 1.0;
 double LeafSpineTopology::delayLeafDwn = 1.0;
 double LeafSpineTopology::delaySpineUp = 1.0;
@@ -123,11 +128,13 @@ LeafSpineTopology::init_network()
                 logfile->addLogger(*qLoggerDwn);
                 queues_srvr_tor.push_back(make_pair(
                     alloc_queue(qLoggerUp, 1, (float)nicspd*1e3, queueSize),
-                    alloc_queue(qLoggerDwn, 1, (float)nicspd*1e3, queueSize)
+                    alloc_queue(qLoggerDwn, 0, (float)nicspd*1e3, queueSize)
                     ));
                 
                 // add lossless ports to switches if needed
                 auto qPair = queues_srvr_tor.back();
+                qPair.first ->setName("SRV-" + ntoa(srvr_id+tor_id*srvrsPerTor) + "->ToR-" + ntoa(tor_id));
+                qPair.second ->setName("ToR-" + ntoa(tor_id) + "->SRV-" + ntoa(+tor_id*srvrsPerTor));
                 if (qt == LOSSLESS) {
                     tors.back()->addPort(qPair.second);
                     ((LosslessQueue*)(qPair.second))->setRemoteEndpoint(
@@ -165,6 +172,8 @@ LeafSpineTopology::init_network()
                     alloc_queue(qLoggerDwn, 0, (float)aggrspd*1e3, queueSize)));
 
                 auto qPair = queues_tor_aggr.back();
+                qPair.first ->setName("ToR-" + ntoa(tor_id) + "->AGG-" + ntoa(aggr_id));
+                qPair.second->setName("AGG-" + ntoa(aggr_id) + "->ToR-" + ntoa(tor_id));
                 if (qt == LOSSLESS) {
                     tors[tor_id+pod_id*torsPerPod]->addPort(qPair.first);
                     ((LosslessQueue*)(qPair.first))->setRemoteEndpoint(

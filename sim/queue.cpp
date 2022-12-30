@@ -198,6 +198,9 @@ PriorityQueue::receivePacket(Packet& pkt)
 
     _queuesize[prio] += pkt.size();
     _queue[prio].push_front(&pkt);
+    if(pkt.flow_id() == 959){
+        cout << "Priority Queue " << _name << " prio " << prio << " size " << _queuesize[prio] << endl;
+    }
 
     if (_logger) _logger->logQueue(*this, QueueLogger::PKT_ENQUEUE, pkt);
 

@@ -455,12 +455,16 @@ void NdpSrc::receivePacket(Packet& pkt)
 {
     pkt.flow().logTraffic(pkt,*this,TrafficLogger::PKT_RCVDESTROY);
 
+
+
     switch (pkt.type()) {
     case NDP:
 	{
 	    _bounces_received++;
 	    _first_window_count--;
 	    processRTS((NdpPacket&)pkt);
+		if(_flow_size == 5768)
+			cout << " recv_packet "<<eventlist().now() <<" type " << pkt.type() << " " << ((NdpPacket&)pkt).seqno() <<" " << pkt.flow_id() << endl;
 	    return;
 	}
     case NDPNACK: 
@@ -474,6 +478,8 @@ void NdpSrc::receivePacket(Packet& pkt)
 		printf("NACK\n");
 	    }*/
 	    processNack((const NdpNack&)pkt);
+		if(_flow_size == 5768)
+			cout << " recv_packet "<<eventlist().now() <<" type " << pkt.type() << " " << ((NdpNack&)pkt).ackno() <<" " << pkt.flow_id() << endl;
 	    pkt.free();
 	    return;
 	} 
@@ -494,6 +500,8 @@ void NdpSrc::receivePacket(Packet& pkt)
 	  
 	    }
 	    //printf("Receive PULL: %s\n", p->pull_bitmap().to_string().c_str());
+		if(_flow_size == 5768)
+			cout << " recv_packet "<<eventlist().now() <<" type " << pkt.type() << " " << p->ackno() <<" " << pkt.flow_id() << endl;
 	    pull_packets(p->pullno(), p->pacerno());
 	    return;
 	}
@@ -505,6 +513,8 @@ void NdpSrc::receivePacket(Packet& pkt)
 	    //	    if (_log_me) {
 	    //	printf("ACK, pw=%d\n", _pull_window);
 	    //}
+		if(_flow_size == 5768)
+			cout << " recv_packet "<<eventlist().now() <<" type " << pkt.type() << " " << ((NdpAck&)pkt).ackno() <<" " << pkt.flow_id() << endl;
 	    processAck((const NdpAck&)pkt);
 	    pkt.free();
 	    return;
@@ -607,6 +617,8 @@ void NdpSrc::send_packet(NdpPull::seq_t pacer_no) {
 	    p->set_route(*rt);
 	    _path_counts_rtx[p->path_id()]++;
 	}
+	if(_flow_size == 5768)
+		cout << " rtx send_packet "<<eventlist().now() <<" pkt_size " << p->size() <<" _flight_size "<<_flight_size << " " << p->seqno() <<" " << p->flow_id() << endl;	
 	PacketSink* sink = p->sendOn();
 	PriorityQueue *q = dynamic_cast<PriorityQueue*>(sink);
 	assert(q);
@@ -669,7 +681,9 @@ void NdpSrc::send_packet(NdpPull::seq_t pacer_no) {
 	p->set_ts(eventlist().now());
 
 	_flight_size += pkt_size;
-	// cout << " send_packet "<<eventlist().now() <<" pkt_size " << pkt_size <<" _flight_size "<<_flight_size << endl;
+	if(_flow_size == 5768)
+		cout << " send_packet "<<eventlist().now() <<" pkt_size " << pkt_size <<" _flight_size "<<_flight_size << " " << p->seqno() <<" " << p->flow_id() << endl;
+
 
 	// 	if (_log_me) {
 	// 	    cout << "Sent " << _highest_sent+1 << " FSz: " << _flight_size << endl;
@@ -1218,6 +1232,7 @@ NdpPullPacer::NdpPullPacer(EventList& event, double pull_rate_modifier)  :
     EventSource(event, "ndp_pacer"), _last_pull(0)
 {
     _packet_drain_time = (simtime_picosec)(Packet::data_packet_size() * (pow(10.0,12.0) * 8) / speedFromMbps((uint64_t)HOST_NIC))/pull_rate_modifier;
+	cout << "_packet_drain_time  " << _packet_drain_time << " ps " << Packet::data_packet_size()*8.0*1000/10 << endl;
     _log_me = false;
     _pacer_no = 0;
 }

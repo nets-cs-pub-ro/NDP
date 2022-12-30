@@ -20,6 +20,12 @@
 class NdpSinkPart;
 class NdpRecvrAggr;
 class NdpLoadGen;
+struct FlowInput{
+	uint32_t src, dst, pg, appid, message_size, port, dport;
+	uint64_t start_time;
+	uint32_t idx;
+};
+
 class NdpSrcPart : public NdpSrc {
   public:
 	NdpSrcPart(NdpLogger* logger, TrafficLogger* pktLogger,
@@ -48,6 +54,7 @@ class NdpSinkPart : public NdpSink {
     void reset();
     NdpRecvrAggr* recvrAggr; //back pointer to NdpRecvrAggr owning this ndpsink
     bool recvCmplt;
+    simtime_picosec first_receive_time; 
 };
 
 /**
@@ -127,12 +134,13 @@ class NdpReadTrace : public NdpLoadGen {
         NdpRtxTimerScanner* rtx, vector<const Route*>*** allRoutes, string flowfile);
     ~NdpReadTrace(){}
     virtual void doNextEvent();
-    void run();
+    void scheduleInput();
+    void ReadFlowInput();
 
     string flowfile;
     uint32_t flow_num;
     ifstream flowf;
-    uint32_t flow_idx;
+    FlowInput flow_input; 
 
 }; //class NdpReadTrace
 

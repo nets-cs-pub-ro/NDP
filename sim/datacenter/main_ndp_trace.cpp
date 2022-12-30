@@ -60,10 +60,10 @@ void exit_error(char* progr) {
 uint16_t loadFactor = 65; // load factor in percent
 
 int main(int argc, char **argv) {
-    Packet::set_packet_size(9000);
-    eventlist.setEndtime(timeFromSec(4.0));
+    Packet::set_packet_size(1442);
+    eventlist.setEndtime(timeFromSec(5.0));
     Clock c(timeFromSec(5 / 100.), eventlist);
-    uint32_t no_of_conns = DEFAULT_NODES, cwnd = 15, no_of_nodes = DEFAULT_NODES;
+    uint32_t no_of_conns = DEFAULT_NODES, cwnd = 32, no_of_nodes = DEFAULT_NODES;
     mem_b queuesize = memFromPkt(DEFAULT_QUEUE_SIZE);
     stringstream filename(ios_base::out);
     RouteStrategy route_strategy = NOT_SET;
@@ -190,8 +190,8 @@ int main(int argc, char **argv) {
 
 
 #ifdef LEAF_SPINE_H
-    int srvrsPerTor = 32; //16
-    int torsPerPod = 16;  //9
+    int srvrsPerTor = 16; //32; //16
+    int torsPerPod = 9; //16;  //9
     int numPods = 1;
     LeafSpineTopology* top = new LeafSpineTopology(srvrsPerTor, torsPerPod,
         numPods, queuesize, &logfile, &eventlist, ff, COMPOSITE);

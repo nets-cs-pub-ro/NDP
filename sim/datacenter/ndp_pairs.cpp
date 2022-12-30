@@ -81,17 +81,21 @@ NdpSrcPart::receivePacket(Packet& pkt){
         //   timeAsUs(eventlist().now()-started) << "us." << " experience " <<(pkt.route()->size() -1) << " us"<< endl;
           //total bytes including headers
           uint64_t total_bytes_per_message = (mesgSize/_mss)*(_mss+ACKSIZE) + (mesgSize%_mss > 0 ? 1: 0)*(mesgSize%_mss + ACKSIZE);
+          print_route(*(pkt.route()));
           //nanosecond
-          float ideal_fct = (pkt.route()->size() -1)*1000 + total_bytes_per_message*8.0/100;
+          //assume 100Gpbs
+          uint32_t ideal_fct = (pkt.route()->size() -1)*1000 + total_bytes_per_message*8.0/(HOST_NIC/1000);
           //nanosecond
-          double fct = timeAsNs(eventlist().now() - started);
+          cout << "started "<< started << endl;
+          uint32_t fct = timeAsNs(eventlist().now() - started);
           float slowdown = timeAsNs(eventlist().now()-started)/ideal_fct;
           // sip, dip, sport, dport, size (B), start_time, fct (ns), standalone_fct (ns), qid, appid
-          cout << loadGen->src <<" dip sport dport "<< mesgSize <<" "<< timeAsNs(started) <<" "<< fct <<" "<< ideal_fct<< " yle yle" <<endl;
+          cout << loadGen->src <<" dip sport dport "<< mesgSize <<" "<< timeAsNs(started) <<" "<< fct <<" "<< ideal_fct<<" "<< timeAsNs(eventlist().now()) <<" " << slowdown <<endl;
           sender_tput[loadGen->src] = make_pair(sender_tput[loadGen->src].first + mesgSize, sender_tput[loadGen->src].second) ;
-          cout << "yle: node "<< loadGen->src  <<" tput: " <<  sender_tput[loadGen->src].first*8.0 /(timeAsMs(eventlist().now()- sender_tput[loadGen->src].second*1000))/1000000 << "Gbps " << endl;
+        //   cout.precision(2);
+          cout << "yle: node "<< loadGen->src  <<" tput: " <<  sender_tput[loadGen->src].first*8.0 /(timeAsNs(eventlist().now()- sender_tput[loadGen->src].second))<< "Gbps " << endl;
           total_message_size += mesgSize;
-          cout<< "current_tput=" << total_message_size*8.0/(timeAsMs(eventlist().now()))/1000000 << "Gbps " << endl;
+          cout<< "current_tput=" << total_message_size*8.0/(timeAsNs(eventlist().now())) << "Gbps " << endl;
 	  	  NdpSrcPart::inflightMesgs--;
           reset(0, 0);
         }
@@ -143,25 +147,46 @@ NdpSinkPart::receivePacket(Packet& pkt)
             case NDP: {
                 recvrAggr->dataBytesRecvd += pkt.size();
                 recvrAggr->bytesRecvd += pkt.size();
+                NdpPacket *p = (NdpPacket*)(&pkt);
+                if(p->seqno() == 1){
+                    first_receive_time  = srcPart->eventlist().now();
+                }
                 break;
             }
             case NDPACK:
             case NDPNACK:
             case NDPPULL:
                 recvrAggr->bytesRecvd += pkt.size();
+                cout << "should not receive ACK, NACK, or PULL packet at sink " << str() << endl;
+                exit(-1);
                 break;
             default:
                 cout << "unrecognized pkt recvd at " << str() << endl;
                 break;
         }
     }
-
     // handle the packet in ndp mechanism
     NdpSink::receivePacket(pkt);
 
     // have received everything
     recvCmplt = (_last_packet_seqno > 0 &&
         _cumulative_ack == _last_packet_seqno);
+    if(recvCmplt){
+            print_route(*(pkt.route()));
+          int mesgSize = _cumulative_ack;
+          int mtu = srcPart->_mss;
+          uint64_t total_bytes_per_message = (mesgSize/mtu)*(mtu+ACKSIZE) + (mesgSize%mtu > 0 ? 1: 0)*(mesgSize%mtu + ACKSIZE);
+          simtime_picosec started = srcPart->started;
+          //nanosecond
+          //assume 100Gpbs
+          uint32_t ideal_fct = ((pkt.route()->size() -1)/2)*1000 + total_bytes_per_message*8.0/(HOST_NIC/1000);
+          uint32_t fct = timeAsNs(srcPart->eventlist().now() - started);
+          simtime_picosec another_way = srcPart->eventlist().now() - first_receive_time;
+          uint32_t one_way_delay = timeAsNs(another_way);
+          float slowdown = timeAsNs(srcPart->eventlist().now()-started)/ideal_fct;
+          // sip, dip, sport, dport, size (B), start_time, fct (ns), standalone_fct (ns), qid, appid
+        //   cout << srcPart->loadGen->src <<" dip sport dport "<< mesgSize <<" "<< timeAsNs(started) <<" "<< fct <<" "<< ideal_fct<< " "<< one_way_delay<<" yle" <<endl;
+    }
     if (recvCmplt) {
         recvrAggr->markInactive(this);
     }
@@ -373,10 +398,13 @@ NdpReadTrace::NdpReadTrace(EventList& eventlist, int src,
     , flowfile(flow_file)
 {
     flowf.open(flow_file.c_str());
-    flow_idx = 0;
+    flow_input = {0};
     flowf >> flow_num;
     // cout << " flow file: " << flow_file.c_str() << " flow_num: " << flow_num << endl;
-    eventlist.sourceIsPendingRel(*this, timeFromMs(0));
+    
+    ReadFlowInput();
+    simtime_picosec nextArrival = timeFromNs(flow_input.start_time) - eventlist.now();
+    eventlist.sourceIsPendingRel(*this, nextArrival);
 }
 
 void
@@ -385,59 +413,63 @@ NdpReadTrace::doNextEvent()
   if (msgNumber > flow_num) {
     return;
   }
-  run();
+  scheduleInput();
 
   
 }
-
-void
-NdpReadTrace::run()
-{
-    uint32_t dest, pg, dport, messageSize;
+void NdpReadTrace:: ReadFlowInput(){
     int source = -1;
-    uint64_t start_time_ns;
-    while(source != src && flow_idx < flow_num){
-        flowf >> source >> dest >> pg >> dport >> messageSize >> start_time_ns;
-        flow_idx ++;
+    while(source != src && flow_input.idx < flow_num){
+		flowf >> source >> flow_input.dst >> flow_input.appid >> flow_input.dport >> flow_input.message_size >> flow_input.start_time;
+        flow_input.idx ++;
     }
-    if(flow_idx == flow_num && source != src){
+    if(flow_input.idx == flow_num && source != src){
         // cout<< " src node " << src << " msgNumber " << msgNumber <<endl;
         return;
     }
+    flow_input.src = source;
+    flow_input.idx --;
     msgNumber++;
     if (sender_tput.find(src) == sender_tput.end()){
-        sender_tput[src] = make_pair(0, timeFromNs(start_time_ns));
+        sender_tput[src] = make_pair(0, timeFromNs(flow_input.start_time));
     }
-    simtime_picosec nextArrival =  timeFromNs(start_time_ns) - eventlist().now();
-    cout <<"src "<< src <<" source "<< source << " dest " << dest 
-        << " msg " << messageSize << " start_time (us) " << start_time_ns 
-        <<" nextArrival " << nextArrival
-        <<endl;
-    //look for inactive connection
-    NdpPairList& ndpPairs = allNdpPairs[dest];
-    NdpPair ndpPair;
-    NdpPairList::iterator it;
-    for (it=ndpPairs.begin(); it != ndpPairs.end(); it++) {
-        ndpPair =  *it;
-        if (!ndpPair.first->isActive) {
-            break;
+}
+void
+NdpReadTrace::scheduleInput()
+{
+    while(flow_input.idx < flow_num && timeFromNs(flow_input.start_time) == eventlist().now()){
+            //look for inactive connection
+        if(flow_input.message_size > 0 && flow_input.src == src){
+            NdpPairList& ndpPairs = allNdpPairs[flow_input.dst];
+            NdpPair ndpPair;
+            NdpPairList::iterator it;
+            for (it=ndpPairs.begin(); it != ndpPairs.end(); it++) {
+                ndpPair =  *it;
+                if (!ndpPair.first->isActive) {
+                    break;
+                }
+            }
+            if (it != ndpPairs.end()) {
+                ndpPairs.erase(it);
+                ndpPairs.push_back(ndpPair);
+            } else {
+                ndpPair = createConnection(flow_input.dst);
+            }
+            ndpPair.first->reset(flow_input.message_size, true);
         }
+        flow_input.idx ++;
+        ReadFlowInput();
     }
-
-    if (it != ndpPairs.end()) {
-        ndpPairs.erase(it);
-        ndpPairs.push_back(ndpPair);
-    } else {
-        ndpPair = createConnection(dest);
+    if(flow_input.idx < flow_num){
+        simtime_picosec nextArrival =  timeFromNs(flow_input.start_time) - eventlist().now();
+        cout <<"src "<< src <<" source "<< flow_input.src << " dest " << flow_input.dst 
+            << " msg " << flow_input.message_size << " start_time (us) " << flow_input.start_time 
+            <<" nextArrival " << nextArrival
+            <<endl;
+        eventlist().sourceIsPendingRel(*this, nextArrival); 
+    }else{
+        flowf.close();
     }
-    ndpPair.first->reset(messageSize, true);
-    if(timeFromNs(start_time_ns) < eventlist().now()){
-        cerr << "The next message should start "<< start_time_ns << "ns, but read at " << eventlist().now()/1000
-            << "ns \n";
-        exit(1);
-    }
-    
-    eventlist().sourceIsPendingRel(*this, nextArrival); 
 }
 
 NdpRecvrAggr::NdpRecvrAggr(EventList& eventlist, int dest, NdpPullPacer* pacer)

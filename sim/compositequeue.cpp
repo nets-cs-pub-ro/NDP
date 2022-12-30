@@ -25,6 +25,8 @@ CompositeQueue::CompositeQueue(linkspeed_bps bitrate, mem_b maxsize, EventList& 
   _serv = QUEUE_INVALID;
   stringstream ss;
   ss << "compqueue(" << bitrate/1000000 << "Mb/s," << maxsize << "bytes)";
+  cout << "compqueue(" << bitrate/1000000 << "Mb/s," << maxsize << "bytes)" << endl;
+
   _nodename = ss.str();
 }
 
@@ -125,7 +127,7 @@ if (!pkt.header_only() && _num_bounced <2){
     if (!pkt.header_only()){
 //yanfang: hardcode, disable the random drop, 
 //because it assumes that the every packet is the same size
-	if (_queuesize_low+pkt.size() <= _maxsize  ) { //|| drand()<0.5
+	if (_queuesize_low+pkt.size() <= _maxsize ){ //|| drand()<0.5
 	    //regular packet; don't drop the arriving packet
 
 	    // we are here because either the queue isn't full or,
@@ -143,7 +145,7 @@ if (!pkt.header_only() && _num_bounced <2){
 		Packet* booted_pkt = _enqueued_low.front();
 		_enqueued_low.pop_front();
 		_queuesize_low -= booted_pkt->size();
-		//cout << "A [ " << _enqueued_low.size() << " " << _enqueued_high.size() << " ] STRIP" << endl;
+		cout << _name << " A [ " << _enqueued_low.size() << " " << _enqueued_high.size() << " " << pkt.size()<< " ] STRIP" << endl;
 		//cout << "booted_pkt->size(): " << booted_pkt->size();
 		booted_pkt->strip_payload();
 		_num_stripped++;
@@ -198,7 +200,7 @@ if (!pkt.header_only() && _num_bounced <2){
 	    return;
 	} else {
 	    //strip packet the arriving packet - low priority queue is full
-	    //cout << "B [ " << _enqueued_low.size() << " " << _enqueued_high.size() << " ] STRIP" << endl;
+	    cout << _name << " B [ " << _enqueued_low.size() << " " << _enqueued_high.size() <<" " << pkt.size()<< " ] STRIP" << endl;
 	    pkt.strip_payload();
 	    _num_stripped++;
 	    pkt.flow().logTraffic(pkt,*this,TrafficLogger::PKT_TRIM);
@@ -222,7 +224,7 @@ if (!pkt.header_only() && _num_bounced <2){
 	    printf("nexthop: %d\n", pkt.nexthop());
 #endif
 	    pkt.bounce();
-#if 0
+#if 1
 	    printf("\nRev route:\n");
 	    print_route(*(pkt.reverse_route()));
 	    printf("nexthop: %d\n", pkt.nexthop());
