@@ -265,7 +265,7 @@ class NdpSink : public PacketSink, public DataReceiver, public Logged {
 class NdpPullPacer : public EventSource {
  public:
     NdpPullPacer(EventList& ev, double pull_rate_modifier);  
-    NdpPullPacer(EventList& event, uint64_t bwMbps);
+    NdpPullPacer(EventList& event, double pull_rate_modifier, uint64_t bwMbps);
     NdpPullPacer(EventList& ev, char* fn);  
     // pull_rate_modifier is the multiplier of link speed used when
     // determining pull rate.  Generally 1 for FatTree, probable 2 for BCube
