@@ -236,7 +236,7 @@ int main(int argc, char **argv) {
     vector<NdpRecvrAggr*> recvrAggrs;
     vector<NdpPullPacer*> pacers;
     for (size_t node = 0; node < no_of_nodes; node++) {
-	    pacers.push_back(new NdpPullPacer(eventlist, HOST_NIC));
+	    pacers.push_back(new NdpPullPacer(eventlist,1, HOST_NIC));
         recvrAggrs.push_back(new NdpRecvrAggr(eventlist, node, pacers.back()));
     }
 	size_t node = 0;

@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <sstream>
+#include "ndppacket.h"
 
 CompositeQueue::CompositeQueue(linkspeed_bps bitrate, mem_b maxsize, EventList& eventlist, 
 			       QueueLogger* logger)
@@ -112,9 +113,16 @@ CompositeQueue::receivePacket(Packet& pkt)
 {
     pkt.flow().logTraffic(pkt,*this,TrafficLogger::PKT_ARRIVE);
 //Yanfang: The code below is used to test the RTS
-#if 0 
-if (!pkt.header_only() && _num_bounced <2){
+#if 0
+
+if (!pkt.header_only() && _num_bounced <4){
+	if(pkt.type()==NDP){
+		NdpPacket *ndppkt = (NdpPacket*)&pkt;
+		cout <<pkt.flow_id()  << " " <<ndppkt->seqno() << " ";
+	}
 	pkt.strip_payload();
+	cout << _name << " "<< eventlist().now()<<" "<< pkt.flow_id() <<" [ " << _enqueued_low.size() << " " << _enqueued_high.size() <<" " << pkt.size()<< " ] Monitor" << endl;
+
 	if (pkt.reverse_route()  && pkt.bounced() == false) {
 			pkt.bounce();
 			pkt.sendOn();
@@ -123,8 +131,9 @@ if (!pkt.header_only() && _num_bounced <2){
 	return;
 }
 #endif
-	if(pkt.flow_id() == 8429)
-		cout << _name << " "<< eventlist().now()<<" "<< pkt.flow_id() <<" [ " << _enqueued_low.size() << " " << _enqueued_high.size() <<" " << pkt.size()<< " ] Monitor" << endl;
+
+	// if(pkt.flow_id() == 1109)
+	// 	cout << _name << " "<< eventlist().now()<<" "<< pkt.flow_id() <<" [ " << _enqueued_low.size() << " " << _enqueued_high.size() <<" " << pkt.size()<< " ] Monitor" << endl;
 
     if (!pkt.header_only()){
 //yanfang: hardcode, disable the random drop, 
@@ -202,7 +211,7 @@ if (!pkt.header_only() && _num_bounced <2){
 	    return;
 	} else {
 	    //strip packet the arriving packet - low priority queue is full
-	    cout << _name << " B [ " << _enqueued_low.size() << " " << _enqueued_high.size() <<" " << pkt.size()<< " ] STRIP" << endl;
+	    cout << _name << " B [ " << _enqueued_low.size() << " " << _enqueued_high.size() <<" " << pkt.size()<<" " << pkt.flow_id() << " ] STRIP" << endl;
 	    pkt.strip_payload();
 	    _num_stripped++;
 	    pkt.flow().logTraffic(pkt,*this,TrafficLogger::PKT_TRIM);
@@ -228,6 +237,12 @@ if (!pkt.header_only() && _num_bounced <2){
 	    pkt.bounce();
 #if 1
 	    printf("\nRev route:\n");
+		if(pkt.type()==NDP){
+			NdpPacket *ndppkt = (NdpPacket*)&pkt;
+			cout <<pkt.flow_id()  << " " <<ndppkt->seqno() << " ";
+		}
+	    cout << _name <<" B[ " <<pkt.flow_id() << " ] BOUNCE " <<endl;
+		print_route(*(pkt.route()));
 	    print_route(*(pkt.reverse_route()));
 	    printf("nexthop: %d\n", pkt.nexthop());
 #endif
@@ -246,8 +261,12 @@ if (!pkt.header_only() && _num_bounced <2){
     }
     
     
-    //if (pkt.type()==NDP)
-    //  cout << "H " << pkt.flow().str() << endl;
+    // if (pkt.type()==NDP && pkt.flow_id() == 1439 && pkt.bounced()){
+	// 	NdpPacket *ndppkt = (NdpPacket*)&pkt;
+	// 	cout <<pkt.flow_id()  << " " <<ndppkt->seqno() << " ";
+	// 	cout << "H " << pkt.flow().str() <<" " << pkt.flow_id() << " " << _name << endl;
+	// }
+     
     
     _enqueued_high.push_front(&pkt);
     _queuesize_high += pkt.size();

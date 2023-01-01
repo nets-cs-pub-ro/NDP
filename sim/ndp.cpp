@@ -85,6 +85,7 @@ NdpSrc::NdpSrc(NdpLogger* logger, TrafficLogger* pktlogger, EventList &eventlist
     _rtx_timeout = timeInf;
     _node_num = _global_node_count++;
     _nodename = "ndpsrc" + to_string(_node_num);
+	cout << "new Ndpsrc _nodename " << _nodename << endl;
 
     // debugging hack
     _log_me = false;
@@ -278,7 +279,7 @@ bool NdpSrc::is_bad_path() {
 /* Process a return-to-sender packet */
 void NdpSrc::processRTS(NdpPacket& pkt){
 	//Yanfang	
-	cout << " processRTS "<< pkt.seqno() << endl;
+	cout << " processRTS "<< pkt.seqno() <<" at "<< _name  << endl;
 	int pkt_size = _mss;
 	if(pkt.seqno() + _mss -1 >= _flow_size){
 		pkt_size = _flow_size - pkt.seqno() +1;
@@ -688,7 +689,10 @@ void NdpSrc::send_packet(NdpPull::seq_t pacer_no) {
 	// 	if (_log_me) {
 	// 	    cout << "Sent " << _highest_sent+1 << " FSz: " << _flight_size << endl;
 	// 	}
-	// print_route(*(p->route()));
+	// if(p->seqno() == 1){
+	// 	print_route(*(p->route()));
+	// 	print_route(*(p->route()->reverse()));
+	// }
 	// cout << "_highest_sent "<< _highest_sent <<" " << p->route()->size() << endl;
 
 	_highest_sent += pkt_size;  //XX beware wrapping
@@ -1232,7 +1236,7 @@ NdpPullPacer::NdpPullPacer(EventList& event, double pull_rate_modifier, uint64_t
     EventSource(event, "ndp_pacer"), _last_pull(0)
 {
     _packet_drain_time = (simtime_picosec)(Packet::data_packet_size() * (pow(10.0,12.0) * 8) / speedFromMbps((uint64_t)bwMbps))/pull_rate_modifier;
-	cout << "_packet_drain_time  " << _packet_drain_time << " ps " << Packet::data_packet_size()*8.0*1000/10 << endl;
+	cout << "NdpPullPacer _packet_drain_time  " << _packet_drain_time << " ps " << Packet::data_packet_size()*8.0*1000/(bwMbps/1000) << " ps" << endl;
     _log_me = false;
     _pacer_no = 0;
 }

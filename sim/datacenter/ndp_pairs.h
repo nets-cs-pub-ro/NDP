@@ -112,6 +112,7 @@ class NdpLoadGen : public EventSource {
     string itoa(uint64_t n);
     void printAllActive();
     //void printTopoPaths(vector<const Route*>* paths, int src);
+    void copyRoute(const Route *route_src, route_t *route_dest);
 
     std::vector<NdpPairList> allNdpPairs;
     int src;

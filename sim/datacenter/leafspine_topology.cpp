@@ -134,7 +134,7 @@ LeafSpineTopology::init_network()
                 // add lossless ports to switches if needed
                 auto qPair = queues_srvr_tor.back();
                 qPair.first ->setName("SRV-" + ntoa(srvr_id+tor_id*srvrsPerTor) + "->ToR-" + ntoa(tor_id));
-                qPair.second ->setName("ToR-" + ntoa(tor_id) + "->SRV-" + ntoa(+tor_id*srvrsPerTor));
+                qPair.second ->setName("ToR-" + ntoa(tor_id) + "->SRV-" + ntoa(srvr_id+tor_id*srvrsPerTor));
                 if (qt == LOSSLESS) {
                     tors.back()->addPort(qPair.second);
                     ((LosslessQueue*)(qPair.second))->setRemoteEndpoint(

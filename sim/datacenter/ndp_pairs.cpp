@@ -9,7 +9,7 @@ map<uint32_t, pair<uint64_t, uint64_t> > sender_tput;
 
 uint64_t NdpSrcPart::inflightMesgs = 0;
 int NdpSrcPart::lastLogTime = 0;
-int NdpLoadGen::initConn = 30;
+int NdpLoadGen::initConn = 3;
 //int NdpLoadGen::initConn = 1;
 
 // static int message_generated = 0;
@@ -271,6 +271,21 @@ NdpLoadGen::doNextEvent()
   eventlist().sourceIsPendingRel(*this, nextArrival);
 }
 
+void
+NdpLoadGen::copyRoute(const Route *route_src, route_t *route_dest){
+    const route_t *reverse = route_src->reverse();
+    for(int i=0; i< route_src->size() ; i++){
+        route_dest->push_back(route_src->at(i));
+    }
+    route_t *route_back; 
+    route_back= new Route();
+    for(int i=0; i< reverse->size() ; i++){
+        route_back->push_back(reverse->at(i));
+    }
+    route_dest->set_reverse(route_back);
+    route_back->set_reverse(route_dest);
+}
+
 NdpLoadGen::NdpPair&
 NdpLoadGen::createConnection(int dest)
 {
@@ -298,12 +313,22 @@ NdpLoadGen::createConnection(int dest)
         ndpRtxScanner->registerNdp(*ndpSrc);
 
         size_t choice = rand() % allRoutes[src][dest]->size();
-        Route* routeout = new Route(*(allRoutes[src][dest]->at(choice)));
-        routeout->push_back(ndpSnk);
+        // Route* routeout = new Route(*(allRoutes[src][dest]->at(choice)));
+        route_t *routeout, *routein; 
+        routeout= new Route();
+        copyRoute(allRoutes[src][dest]->at(choice), routeout);
+        routeout->add_endpoints(ndpSrc, ndpSnk);
 
         choice = rand() % allRoutes[dest][src]->size();
-        Route* routein = new Route(*(allRoutes[dest][src]->at(choice)));
-        routein->push_back(ndpSrc);
+        // Route* routein = new Route(*(allRoutes[dest][src]->at(choice)));
+        routein= new Route();
+        copyRoute(allRoutes[dest][src]->at(choice), routein);
+        routein->add_endpoints(ndpSnk, ndpSrc);
+
+        // print_route(*routeout);
+        // print_route(*(routeout->reverse()));
+        // print_route(*routein);
+        // print_route(*(routein->reverse()));
 
         if(NdpSrc::_route_strategy == SINGLE_PATH){
             routeout->set_path_id(0,1);
@@ -311,8 +336,21 @@ NdpLoadGen::createConnection(int dest)
         }
         ndpSrc->connect(*routeout, *routein, *ndpSnk, eventlist().now());
         if (NdpSrc::_route_strategy != SINGLE_PATH && NdpSrc::_route_strategy != NOT_SET){
-            ndpSrc->set_paths(allRoutes[src][dest]);
-            ndpSnk->set_paths(allRoutes[dest][src]);
+            vector<const Route*>* newpaths_src_dest = new vector<const Route*>();
+            vector<const Route*>* newpaths_dest_src = new vector<const Route*>();
+            route_t *routeout, *routein; 
+            for(int j=0; j< allRoutes[src][dest]->size(); j++){
+                routeout = new Route();
+                copyRoute(allRoutes[src][dest]->at(j), routeout);
+                newpaths_src_dest->push_back(routeout);
+            }
+            for(int j=0; j< allRoutes[dest][src]->size(); j++){
+                routein = new Route();
+                copyRoute(allRoutes[dest][src]->at(j), routein);
+                newpaths_dest_src->push_back(routein);
+            }
+            ndpSrc->set_paths(newpaths_src_dest);
+            ndpSnk->set_paths(newpaths_dest_src);
         }
 
         pairList.push_back(make_pair(ndpSrc, ndpSnk));
