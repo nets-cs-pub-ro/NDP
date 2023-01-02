@@ -40,6 +40,7 @@ class NdpSrcPart : public NdpSrc {
 
 	uint64_t mesgSize;
 	bool isActive;
+  simtime_picosec last_active_time;
 	simtime_picosec started;
     NdpLoadGen* loadGen; // backpointer to the NdpLoadGen that owns this source
 	vector<route_t*>* paths;

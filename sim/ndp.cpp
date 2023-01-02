@@ -432,7 +432,11 @@ void NdpSrc::processAck(const NdpAck& ack) {
 	int pkt_size = _mss;
 	if(ackno+_mss -1 >= _flow_size){
 		pkt_size = _flow_size - ackno +1 ;
-	}	
+	}	 
+	if(_flight_size < pkt_size){
+		cout << "flow_id " <<ack.flow_id()  <<" _flight_size "<<  _flight_size << " pkt_size " << pkt_size <<" _flow_size " << _flow_size << " " << ackno<< endl;
+
+	}
 	assert(_flight_size >= pkt_size);
     _flight_size -= pkt_size;
 	//yanfang: this assert would never happen, because _flight_size is an uint_32, it is always >=0;
@@ -455,17 +459,14 @@ void NdpSrc::processAck(const NdpAck& ack) {
 void NdpSrc::receivePacket(Packet& pkt) 
 {
     pkt.flow().logTraffic(pkt,*this,TrafficLogger::PKT_RCVDESTROY);
-
-
-
     switch (pkt.type()) {
     case NDP:
 	{
 	    _bounces_received++;
 	    _first_window_count--;
 	    processRTS((NdpPacket&)pkt);
-		if(_flow_size == 1442)
-			cout << " recv_packet "<<eventlist().now() <<" type " << pkt.type() << " " << ((NdpPacket&)pkt).seqno() <<" " << pkt.flow_id() << endl;
+		if(pkt.flow_id() == 241325)
+		 	cout << " recv_packet "<<eventlist().now() <<" NDP " << " " << ((NdpPacket&)pkt).seqno() <<" " << pkt.flow_id() << endl;
 	    return;
 	}
     case NDPNACK: 
@@ -479,8 +480,8 @@ void NdpSrc::receivePacket(Packet& pkt)
 		printf("NACK\n");
 	    }*/
 	    processNack((const NdpNack&)pkt);
-		if(_flow_size == 1442)
-			cout << " recv_packet "<<eventlist().now() <<" type " << pkt.type() << " " << ((NdpNack&)pkt).ackno() <<" " << pkt.flow_id() << endl;
+		if(pkt.flow_id() == 241325)
+			cout << " recv_packet "<<eventlist().now() <<" NDPNACK "  << " " << ((NdpNack&)pkt).ackno() <<" " << pkt.flow_id() << endl;
 	    pkt.free();
 	    return;
 	} 
@@ -501,8 +502,8 @@ void NdpSrc::receivePacket(Packet& pkt)
 	  
 	    }
 	    //printf("Receive PULL: %s\n", p->pull_bitmap().to_string().c_str());
-		if(_flow_size == 1442)
-			cout << " recv_packet "<<eventlist().now() <<" type " << pkt.type() << " " << p->ackno() <<" " << pkt.flow_id() << endl;
+		if(pkt.flow_id() == 241325)
+			cout << " recv_packet "<<eventlist().now() <<" NDPPULL " << " cumackno " << cum_ackno <<" " << pkt.flow_id() <<" " << p->ackno()<< endl;
 	    pull_packets(p->pullno(), p->pacerno());
 	    return;
 	}
@@ -514,8 +515,8 @@ void NdpSrc::receivePacket(Packet& pkt)
 	    //	    if (_log_me) {
 	    //	printf("ACK, pw=%d\n", _pull_window);
 	    //}
-		if(_flow_size == 1442)
-			cout << " recv_packet "<<eventlist().now() <<" type " << pkt.type() << " " << ((NdpAck&)pkt).ackno() <<" " << pkt.flow_id() << endl;
+		if(pkt.flow_id() == 241325)
+			cout << " recv_packet "<<eventlist().now() <<" NDPACK "<< " ackno " << ((NdpAck&)pkt).ackno() <<" ackum "<<((NdpAck&)pkt).cumulative_ack()  <<" " << pkt.flow_id() << endl;
 	    processAck((const NdpAck&)pkt);
 	    pkt.free();
 	    return;
@@ -618,7 +619,7 @@ void NdpSrc::send_packet(NdpPull::seq_t pacer_no) {
 	    p->set_route(*rt);
 	    _path_counts_rtx[p->path_id()]++;
 	}
-	if(_flow_size == 1442)
+	if(p->flow_id() == 241325)
 		cout << " rtx send_packet "<<eventlist().now() <<" pkt_size " << p->size() <<" _flight_size "<<_flight_size << " " << p->seqno() <<" " << p->flow_id() << endl;	
 	PacketSink* sink = p->sendOn();
 	PriorityQueue *q = dynamic_cast<PriorityQueue*>(sink);
@@ -682,7 +683,7 @@ void NdpSrc::send_packet(NdpPull::seq_t pacer_no) {
 	p->set_ts(eventlist().now());
 
 	_flight_size += pkt_size;
-	if(_flow_size == 1442)
+	if(p->flow_id() == 241325)
 		cout << " send_packet "<<eventlist().now() <<" pkt_size " << pkt_size <<" _flight_size "<<_flight_size << " " << p->seqno() <<" " << p->flow_id() << endl;
 
 
@@ -1073,7 +1074,7 @@ void NdpSink::receivePacket(Packet& pkt) {
     _path_lens[pkt.path_len()]++;
 #endif
 
-    int size = p->size()-ACKSIZE; // TODO: the following code assumes all packets are the same size
+    int size = p->size()-ACKSIZE; // Yanfang: fix the todo that the following code assumes all packets are the same size
 
     if (last_packet) {
 	// we've seen the last packet of this flow, but may not have
@@ -1089,31 +1090,46 @@ void NdpSink::receivePacket(Packet& pkt) {
     if (seqno == _cumulative_ack+1) { // it's the next expected seq no
 	_cumulative_ack = seqno + size - 1;
 	// are there any additional received packets we can now ack?
-	while (!_received.empty() && (_received.front() == _cumulative_ack+1) ) {
-	    _received.pop_front();
-	    _cumulative_ack+= size;
+	while (!_received.empty() && (_received.front().first == _cumulative_ack+1) ) {
+	    _cumulative_ack+= _received.front().second;
+		_received.pop_front();
+		if(flow_id() == 241325){
+			cout << " 241325 advance cumack " << seqno << " "<< _cumulative_ack << endl;
+	}
 	}
     } else if (seqno < _cumulative_ack+1) {
 	//must have been a bad retransmit
     } else { // it's not the next expected sequence number
 	if (_received.empty()) {
-	    _received.push_front(seqno);
+	    _received.push_front(make_pair(seqno, size));
+		if(flow_id() == 241325){
+			cout << " 241325 insert_received " << seqno << " "<< _cumulative_ack << endl;
+	}
 	    //it's a drop in this simulator there are no reorderings.
 	    _drops += (size + seqno-_cumulative_ack-1)/size;
-	} else if (seqno > _received.back()) { // likely case
-	    _received.push_back(seqno);
+	} else if (seqno > _received.back().first) { // likely case
+	    _received.push_back(make_pair(seqno, size));
+		if(flow_id() == 241325){
+			cout << " 241325 insert_received_larger " << seqno << " "<< _cumulative_ack <<" " <<_received.back().first << endl;
+		}
 	} 
 	else { // uncommon case - it fills a hole
-	    list<uint64_t>::iterator i;
+	    list<pair<uint64_t, int> >::iterator i;
 	    for (i = _received.begin(); i != _received.end(); i++) {
-		if (seqno == *i) break; // it's a bad retransmit
-		if (seqno < (*i)) {
-		    _received.insert(i, seqno);
+		if (seqno == i->first) break; // it's a bad retransmit
+		if (seqno < i->first) {
+		    _received.insert(i, make_pair(seqno, size));
+			if(flow_id() == 241325){
+				cout << " 241325 insert_received_hole " << seqno << " "<< _cumulative_ack  << " " << i->first<< endl;
+			}			
 		    break;
 		}
 	    }
 	}
     }
+	if(flow_id() == 241325){
+		cout << " 241325 cumack " << seqno << " "<< _cumulative_ack << endl;
+	}
     send_ack(ts, seqno, pacer_no);
     // have we seen everything yet?
     if (_last_packet_seqno > 0 && _cumulative_ack == _last_packet_seqno) {
@@ -1372,6 +1388,14 @@ void NdpPullPacer::sendPacket(Packet* ack, NdpPacket::seq_t rcvd_pacer_no, NdpSi
 	pull_pkt = NdpPull::newpkt((NdpNack*)ack);
 	((NdpNack*)ack)->dont_pull();
     }
+
+	if(ack->flow_id() == 241325){
+		if (ack->type() == NDPACK) {
+			cout << "NdpPullPacer::sendPacket ack "<< eventlist().now() << " " <<  ((NdpAck*)ack)->ackno() <<" " <<((NdpAck*)ack)->cumulative_ack()  << "\n";
+		} else if (ack->type() == NDPNACK) {
+			cout << "NdpPullPacer::sendPacket nack "<< eventlist().now() << " "<<  ((NdpNack*)ack)->ackno() <<" " <<((NdpNack*)ack)->cumulative_ack()  << "\n";
+		}
+	}
     pull_pkt->flow().logTraffic(*pull_pkt,*this,TrafficLogger::PKT_CREATE);
 
     _pull_queue.enqueue(*pull_pkt);
@@ -1417,6 +1441,9 @@ void NdpPullPacer::doNextEvent(){
 
 
     Packet *pkt = _pull_queue.dequeue();
+	if(pkt->flow_id() == 241325){
+		cout << "NdpPullPacer::doNextEvent  "<< eventlist().now() << " " <<  ((NdpPull*)pkt)->ackno() <<" " <<((NdpPull*)pkt)->cumulative_ack()  << "\n";
+    }
 
     //   cout << "Sending NACK for packet " << nack->ackno() << endl;
     pkt->flow().logTraffic(*pkt,*this,TrafficLogger::PKT_SEND);

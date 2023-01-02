@@ -199,7 +199,7 @@ class NdpSink : public PacketSink, public DataReceiver, public Logged {
     void increase_window() {_pull_no++;} 
     static void setRouteStrategy(RouteStrategy strat) {_route_strategy = strat;}
 
-    list<NdpAck::seq_t> _received; // list of packets above a hole, that we've received
+    list<pair<NdpAck::seq_t, int > > _received; // list of packets above a hole, that we've received
  
     NdpSrc* _src;
 

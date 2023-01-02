@@ -9,7 +9,7 @@ map<uint32_t, pair<uint64_t, uint64_t> > sender_tput;
 
 uint64_t NdpSrcPart::inflightMesgs = 0;
 int NdpSrcPart::lastLogTime = 0;
-int NdpLoadGen::initConn = 3;
+int NdpLoadGen::initConn = 10;
 //int NdpLoadGen::initConn = 1;
 
 // static int message_generated = 0;
@@ -35,6 +35,7 @@ NdpSrcPart::reset(uint64_t newMesgSize, bool shouldRestart)
 {
     setMesgSize(newMesgSize);
     isActive = false;
+    last_active_time = eventlist().now();
     if (shouldRestart) {
         eventlist().sourceIsPending(*this, eventlist().now());
     }
@@ -81,7 +82,7 @@ NdpSrcPart::receivePacket(Packet& pkt){
         //   timeAsUs(eventlist().now()-started) << "us." << " experience " <<(pkt.route()->size() -1) << " us"<< endl;
           //total bytes including headers
           uint64_t total_bytes_per_message = (mesgSize/_mss)*(_mss+ACKSIZE) + (mesgSize%_mss > 0 ? 1: 0)*(mesgSize%_mss + ACKSIZE);
-          print_route(*(pkt.route()));
+        //   print_route(*(pkt.route()));
           //nanosecond
           //assume 100Gpbs
           uint32_t ideal_fct = (pkt.route()->size() -1)*1000 + total_bytes_per_message*8.0/(HOST_NIC/1000);
@@ -172,7 +173,7 @@ NdpSinkPart::receivePacket(Packet& pkt)
     recvCmplt = (_last_packet_seqno > 0 &&
         _cumulative_ack == _last_packet_seqno);
     if(recvCmplt){
-            print_route(*(pkt.route()));
+        //   print_route(*(pkt.route()));
           int mesgSize = _cumulative_ack;
           int mtu = srcPart->_mss;
           uint64_t total_bytes_per_message = (mesgSize/mtu)*(mtu+ACKSIZE) + (mesgSize%mtu > 0 ? 1: 0)*(mesgSize%mtu + ACKSIZE);
@@ -375,7 +376,17 @@ NdpLoadGen::run() {
     NdpPairList::iterator it;
     for (it=ndpPairs.begin(); it != ndpPairs.end(); it++) {
         ndpPair =  *it;
-        if (!ndpPair.first->isActive) {
+        simtime_picosec break_time = 0;
+        if(!ndpPair.first->isActive){
+            if(eventlist().now() > ndpPair.first->last_active_time){
+                break_time = eventlist().now() - ndpPair.first->last_active_time;
+            }
+            if (ndpPair.first->last_active_time == 0){
+                break_time = 1e9;
+            }
+        }
+        // 1e9 is 1ms
+        if (!ndpPair.first->isActive && break_time >= 1e9) {
             break;
         }
     }
