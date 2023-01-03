@@ -60,16 +60,17 @@ void exit_error(char* progr) {
 uint16_t loadFactor = 65; // load factor in percent
 
 int main(int argc, char **argv) {
-    Packet::set_packet_size(1442);
+    // Packet::set_packet_size(1442);
     eventlist.setEndtime(timeFromSec(40.0));
     Clock c(timeFromSec(5 / 100.), eventlist);
     uint32_t no_of_conns = DEFAULT_NODES, cwnd = 32, no_of_nodes = DEFAULT_NODES;
-    mem_b queuesize = memFromPkt(DEFAULT_QUEUE_SIZE);
+    mem_b queuesize; // = memFromPkt(DEFAULT_QUEUE_SIZE);
     stringstream filename(ios_base::out);
     RouteStrategy route_strategy = NOT_SET;
     stringstream distfile(ios_base::out);
     stringstream flowfile(ios_base::out);
     int new_queue_size = 0;
+    int mtu = 1442;
 
 	int is_incast = 0;
     int i = 1,seed = 1;
@@ -89,8 +90,7 @@ int main(int argc, char **argv) {
 	    flowfile << argv[i+1];
 	    i++;
     } else if (!strcmp(argv[i], "-mtu")) {
-	    int mtu = atoi(argv[i+1]);
-        Packet::set_packet_size(mtu);
+	    mtu = atoi(argv[i+1]);
 	    i++;
     } else if (!strcmp(argv[i],"-seed")){
 	    seed = atoi(argv[i+1]);
@@ -127,8 +127,12 @@ int main(int argc, char **argv) {
 	i++;
     }
     srand(seed);
+    Packet::set_packet_size(mtu);
+
     if(new_queue_size != 0){
         queuesize = memFromPkt(new_queue_size);
+    }else{
+        queuesize = memFromPkt(DEFAULT_QUEUE_SIZE);
     }
     cout << "mtu " << Packet::data_packet_size() << endl;
     if (route_strategy == NOT_SET) {
