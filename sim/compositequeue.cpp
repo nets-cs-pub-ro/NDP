@@ -132,7 +132,7 @@ if (!pkt.header_only() && _num_bounced <4){
 }
 #endif
 
-	// if(pkt.flow_id() == 1109)
+	// if(pkt.flow_id() == 1353529)
 	// 	cout << _name << " "<< eventlist().now()<<" "<< pkt.flow_id() <<" [ " << _enqueued_low.size() << " " << _enqueued_high.size() <<" " << pkt.size()<< " ] Monitor" << endl;
 
     if (!pkt.header_only()){
@@ -223,7 +223,8 @@ if (!pkt.header_only() && _num_bounced <4){
     if (_queuesize_high+pkt.size() > _maxsize){
 	//drop header
 	cout << "drop!\n";
-	if (pkt.reverse_route()  && pkt.bounced() == false) {
+	// only the data packet can do the RTS
+	if (pkt.reverse_route()  && pkt.bounced() == false && pkt.type() == NDP) {
 	    //return the packet to the sender
 	    if (_logger) _logger->logQueue(*this, QueueLogger::PKT_BOUNCE, pkt);
 	    pkt.flow().logTraffic(pkt,*this,TrafficLogger::PKT_BOUNCE);

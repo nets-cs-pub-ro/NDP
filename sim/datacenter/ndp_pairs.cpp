@@ -1,4 +1,5 @@
 #include <iostream>
+#include <assert.h>
 #include "ndp_pairs.h"
 #include "math.h"
 
@@ -158,8 +159,8 @@ NdpSinkPart::receivePacket(Packet& pkt)
             case NDPNACK:
             case NDPPULL:
                 recvrAggr->bytesRecvd += pkt.size();
-                cout << "should not receive ACK, NACK, or PULL packet at sink " << str() << endl;
-                exit(-1);
+                cout << "should not receive ACK, NACK, or PULL packet at sink " << str() <<" " <<  pkt.flow_id() << " end " <<endl;
+                assert(false);
                 break;
             default:
                 cout << "unrecognized pkt recvd at " << str() << endl;

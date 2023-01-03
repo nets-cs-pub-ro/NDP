@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
     RouteStrategy route_strategy = NOT_SET;
     stringstream distfile(ios_base::out);
     stringstream flowfile(ios_base::out);
-
+    int new_queue_size = 0;
 
 	int is_incast = 0;
     int i = 1,seed = 1;
@@ -88,6 +88,10 @@ int main(int argc, char **argv) {
     } else if (!strcmp(argv[i], "-flow")) {
 	    flowfile << argv[i+1];
 	    i++;
+    } else if (!strcmp(argv[i], "-mtu")) {
+	    int mtu = atoi(argv[i+1]);
+        Packet::set_packet_size(mtu);
+	    i++;
     } else if (!strcmp(argv[i],"-seed")){
 	    seed = atoi(argv[i+1]);
 	    i++;
@@ -101,7 +105,7 @@ int main(int argc, char **argv) {
 	    cwnd = atoi(argv[i+1]);
 	    i++;
 	} else if (!strcmp(argv[i],"-q")){
-	    queuesize = memFromPkt(atoi(argv[i+1]));
+        new_queue_size = atoi(argv[i+1]);
 	    i++;
 	} else if (!strcmp(argv[i],"-incast")){
 	    is_incast = atoi(argv[i+1]);
@@ -123,7 +127,10 @@ int main(int argc, char **argv) {
 	i++;
     }
     srand(seed);
-
+    if(new_queue_size != 0){
+        queuesize = memFromPkt(new_queue_size);
+    }
+    cout << "mtu " << Packet::data_packet_size() << endl;
     if (route_strategy == NOT_SET) {
 	fprintf(stderr, "Route Strategy not set.  Use the -strat param.  \nValid values are perm, rand, pull, rg and single\n");
 	exit(1);
