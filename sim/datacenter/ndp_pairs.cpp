@@ -65,7 +65,7 @@ NdpSrcPart::doNextEvent() {
 
         started = eventlist().now();
         cout << "Started mesg of size: " << mesgSize << ", from ndp_src: "
-            << str() << " at time: " << timeAsUs(started) <<"us." << endl;
+            << str() << " at time: " << timeAsUs(started) <<" us." << endl;
         //cout << "startflow " << endl;
         startflow();
     }
@@ -129,7 +129,7 @@ NdpSrcPart::rtx_timer_hook(simtime_picosec now, simtime_picosec period) {
       return;
   }
   cout << "Transfer timeout: active " << isActive << " mesg size " <<
-    mesgSize << " sent " << _last_acked << endl;
+    mesgSize << " sent " << _last_acked << " start " << started << " src " << loadGen->src <<" now "<< eventlist().now() <<" flow_id " <<  flow_id() <<endl;
   NdpSrc::rtx_timer_hook(now,period);
 }
 

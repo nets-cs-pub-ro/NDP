@@ -132,8 +132,8 @@ if (!pkt.header_only() && _num_bounced <4){
 }
 #endif
 
-	// if(pkt.flow_id() == 1353529)
-	// 	cout << _name << " "<< eventlist().now()<<" "<< pkt.flow_id() <<" [ " << _enqueued_low.size() << " " << _enqueued_high.size() <<" " << pkt.size()<< " ] Monitor" << endl;
+	if(pkt.flow_id() == 22869)
+		cout << _name << " "<< eventlist().now()<<" "<< pkt.flow_id() <<" [ " << _enqueued_low.size() << " " << _enqueued_high.size() <<" " << pkt.size()<< " ] Monitor" << endl;
 
     if (!pkt.header_only()){
 //yanfang: hardcode, disable the random drop, 
@@ -253,7 +253,7 @@ if (!pkt.header_only() && _num_bounced <4){
 	} else {
 	    if (_logger) _logger->logQueue(*this, QueueLogger::PKT_DROP, pkt);
 	    pkt.flow().logTraffic(pkt,*this,TrafficLogger::PKT_DROP);
-	    cout << "B[ " << _enqueued_low.size() << " " << _enqueued_high.size() << " ] DROP " 
+	    cout << "B[ " << _enqueued_low.size() << " " << _enqueued_high.size() <<" " <<pkt.flow_id()<< " ] DROP " 
 	    	 << pkt.flow().id << endl;
 	    pkt.free();
 	    _num_drops++;
