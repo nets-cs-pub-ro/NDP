@@ -598,7 +598,7 @@ void NdpSrc::pull_packets(NdpPull::seq_t pull_no, NdpPull::seq_t pacer_no) {
     // reduce reverse-path RTT - if one pull is delayed on one path, a
     // pull that gets there faster on another path can supercede it
 	if(flow_id() == 22869)
-			cout << " last_pull "<<flow_id() <<" "<<_last_pull <<" pull_no " << pull_no <<" " << pacer_no<< endl;	
+		cout << " last_pull "<<flow_id() <<" "<<_last_pull <<" pull_no " << pull_no <<" " << pacer_no<< endl;	
 	// Here is a bug that I found, a message of two packets, the first packet gets dropped, the second packet arrives at the reciever, 
 	//the cut-payloaded packet of the first packet arrives at the receiver first, the second packet arrives at the receiver later. 
 	//the receiver generates an Nack for the first packet with pull no =2,
@@ -608,7 +608,7 @@ void NdpSrc::pull_packets(NdpPull::seq_t pull_no, NdpPull::seq_t pacer_no) {
 	// The PULL packet would first increase the _last_pull to be 3, because there is not any packet in the retransmission queue, nothing happens.
 	// the NACK packet would call pull_packets function, because _last_pull has already increased to 3, the NACK packet would not trigger a retransmission. 
 	// At the end, only timeout can help this packet gets retransmitted. 
-	if(pull_no <= _last_pull){
+	if(pull_no !=0 && pull_no <= _last_pull){
 		send_packet(pacer_no);
 	}else{
 		while (_last_pull < pull_no) {
@@ -1405,10 +1405,11 @@ void NdpPullPacer::sendPacket(Packet* ack, NdpPacket::seq_t rcvd_pacer_no, NdpSi
 		    cout << "WTF\n";
 		    }*/
 	    }
-		if(ack->flow_id() == 22869){
-			cout << "NdpPullPacer::sendPacket  "<< eventlist().now() << " " <<  ((NdpAck*)ack)->ackno() <<" " <<((NdpAck*)ack)->cumulative_ack() <<" " << ack->flow_id() << "\n";
-		}
 	    set_pacerno(ack, _pacer_no++);
+		if(ack->flow_id() == 22869){
+			cout << "NdpPullPacer::sendPacket  "<< eventlist().now() << " " <<  ((NdpAck*)ack)->ackno() <<" " <<((NdpAck*)ack)->cumulative_ack() 
+				<<" " << ack->flow_id() <<" pull_no "<< ((NdpAck*)ack)->pullno() <<" pacer_no "<<((NdpAck*)ack)->pacerno() << "\n";
+		}
 	    ack->sendOn();
 	    _last_pull = eventlist().now();
 	    return;
@@ -1492,9 +1493,7 @@ void NdpPullPacer::doNextEvent(){
 
 
     Packet *pkt = _pull_queue.dequeue();
-	if(pkt->flow_id() == 22869){
-		cout << "NdpPullPacer::doNextEvent  "<< eventlist().now() << " " <<  ((NdpPull*)pkt)->ackno() <<" " <<((NdpPull*)pkt)->cumulative_ack()  << "\n";
-    }
+
 
     //   cout << "Sending NACK for packet " << nack->ackno() << endl;
     pkt->flow().logTraffic(*pkt,*this,TrafficLogger::PKT_SEND);
@@ -1510,6 +1509,12 @@ void NdpPullPacer::doNextEvent(){
 	}
     }
     set_pacerno(pkt, _pacer_no++);
+	if(pkt->flow_id() == 22869){
+	// if(pkt->type() == NDPPULL)
+		cout << "NdpPullPacer::doNextEvent  "<< eventlist().now() <<" flow_id " << pkt->flow_id()<< " " <<  ((NdpPull*)pkt)->ackno() 
+			<<" " <<((NdpPull*)pkt)->cumulative_ack() <<" pull_no  "<< ((NdpNack*)pkt)->pullno() 	<<" pacer_no "<<((NdpAck*)pkt)->pacerno()<< "\n";
+    }
+
     pkt->sendOn();   
 
     _last_pull = eventlist().now();
