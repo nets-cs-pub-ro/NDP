@@ -284,8 +284,11 @@ int main(int argc, char **argv) {
     for (size_t node = 0; node < no_of_nodes; node++) {
         delete recvrAggrs[node];
     }
-
+    
+    cout << "Simulation completed!" << endl;
     cout << "Done" << endl;
+
+	
     /*
     list <const Route*>::iterator rt_i;
     int counts[10]; int hop;
