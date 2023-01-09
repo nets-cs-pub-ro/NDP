@@ -132,7 +132,7 @@ if (!pkt.header_only() && _num_bounced <4){
 }
 #endif
 
-	if(pkt.flow_id() == 22869)
+	if(pkt.flow_id() == 1371609)
 		cout << _name << " "<< eventlist().now()<<" "<< pkt.flow_id() <<" [ " << _enqueued_low.size() << " " << _enqueued_high.size() <<" " << pkt.size()<< " ] Monitor" << endl;
 
     if (!pkt.header_only()){
@@ -253,8 +253,15 @@ if (!pkt.header_only() && _num_bounced <4){
 	} else {
 	    if (_logger) _logger->logQueue(*this, QueueLogger::PKT_DROP, pkt);
 	    pkt.flow().logTraffic(pkt,*this,TrafficLogger::PKT_DROP);
-	    cout << "B[ " << _enqueued_low.size() << " " << _enqueued_high.size() <<" " <<pkt.flow_id()<< " ] DROP " 
-	    	 << pkt.flow().id << endl;
+		if(pkt.type()==NDP){
+			NdpPacket *ndppkt = (NdpPacket*)&pkt;
+			cout << " NDP " <<ndppkt->seqno() << " ";
+		}else if(pkt.type()== NDPACK){
+			cout << "NDPACK " <<((NdpAck*)&pkt)->ackno() << " ";
+		}else if(pkt.type()== NDPNACK){
+			cout << "NDPNACK " <<((NdpNack*)&pkt)->ackno() << " ";
+		}
+	    cout << "B[ " << _enqueued_low.size() << " " << _enqueued_high.size() <<" " <<pkt.flow_id()<< " ] DROP " << endl;
 	    pkt.free();
 	    _num_drops++;
 	    return;
