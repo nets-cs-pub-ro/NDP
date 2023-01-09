@@ -141,7 +141,7 @@ int main(int argc, char **argv) {
     }else{
         queuesize = memFromPkt(DEFAULT_QUEUE_SIZE);
     }
-    cout << "mtu " << Packet::data_packet_size() << endl;
+    cout << "mtu " << Packet::data_packet_size() <<" queuesize " << queuesize <<" cwnd "<< cwnd << endl;
     if (route_strategy == NOT_SET) {
 	fprintf(stderr, "Route Strategy not set.  Use the -strat param.  \nValid values are perm, rand, pull, rg and single\n");
 	exit(1);
