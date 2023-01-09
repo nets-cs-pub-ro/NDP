@@ -71,6 +71,7 @@ int main(int argc, char **argv) {
     stringstream flowfile(ios_base::out);
     int new_queue_size = 0;
     int mtu = 1442;
+    int bdp = 120000;
 
 	int is_incast = 0;
     int i = 1,seed = 1;
@@ -110,6 +111,9 @@ int main(int argc, char **argv) {
 	} else if (!strcmp(argv[i],"-incast")){
 	    is_incast = atoi(argv[i+1]);
 	    i++;
+    } else if (!strcmp(argv[i],"-bdp")){
+	    bdp = atoi(argv[i+1]);
+	    i++;
 	} else if (!strcmp(argv[i],"-strat")){
 	    if (!strcmp(argv[i+1], "perm")) {
 		route_strategy = SCATTER_PERMUTE;
@@ -128,6 +132,9 @@ int main(int argc, char **argv) {
     }
     srand(seed);
     Packet::set_packet_size(mtu);
+
+    new_queue_size = bdp/mtu + 1;
+    cwnd = bdp/mtu + 1;
 
     if(new_queue_size != 0){
         queuesize = memFromPkt(new_queue_size);
