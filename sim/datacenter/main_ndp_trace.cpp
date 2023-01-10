@@ -134,7 +134,7 @@ int main(int argc, char **argv) {
     Packet::set_packet_size(mtu);
 
     new_queue_size = bdp/mtu + 1;
-    cwnd = bdp/mtu + 1;
+    cwnd = 1.5*bdp/mtu + 1;
 
     if(new_queue_size != 0){
         queuesize = memFromPkt(new_queue_size);
