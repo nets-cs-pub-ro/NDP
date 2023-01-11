@@ -10,8 +10,8 @@ map<uint32_t, pair<uint64_t, uint64_t> > sender_tput;
 
 uint64_t NdpSrcPart::inflightMesgs = 0;
 int NdpSrcPart::lastLogTime = 0;
-int NdpLoadGen::initConn = 10;
-// int NdpLoadGen::initConn = 1;
+// int NdpLoadGen::initConn = 10;
+int NdpLoadGen::initConn = 1;
 
 // static int message_generated = 0;
 NdpSrcPart::NdpSrcPart(NdpLogger* logger, TrafficLogger* pktLogger,
