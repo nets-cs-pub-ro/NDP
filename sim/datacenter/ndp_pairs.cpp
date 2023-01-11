@@ -10,8 +10,8 @@ map<uint32_t, pair<uint64_t, uint64_t> > sender_tput;
 
 uint64_t NdpSrcPart::inflightMesgs = 0;
 int NdpSrcPart::lastLogTime = 0;
-// int NdpLoadGen::initConn = 10;
-int NdpLoadGen::initConn = 1;
+int NdpLoadGen::initConn = 10;
+// int NdpLoadGen::initConn = 1;
 
 // static int message_generated = 0;
 NdpSrcPart::NdpSrcPart(NdpLogger* logger, TrafficLogger* pktLogger,
@@ -103,8 +103,10 @@ NdpSrcPart::receivePacket(Packet& pkt){
         }
     }
     else {
+      cout << "receive packet after flow is not active " << pkt.flow_id() << endl;
       pkt.flow().logTraffic(pkt,*this,TrafficLogger::PKT_RCVDESTROY);
       pkt.free();
+      
     }
 
     double timeNow = timeAsMs(eventlist().now());
@@ -495,13 +497,26 @@ NdpReadTrace::scheduleInput()
     while(flow_input.idx < flow_num && timeFromNs(flow_input.start_time) == eventlist().now()){
             //look for inactive connection
         if(flow_input.message_size > 0 && flow_input.src == src){
-#if 0 
+#if 1 
             NdpPairList& ndpPairs = allNdpPairs[flow_input.dst];
             NdpPair ndpPair;
             NdpPairList::iterator it;
             for (it=ndpPairs.begin(); it != ndpPairs.end(); it++) {
                 ndpPair =  *it;
-                if (!ndpPair.first->isActive) {
+                // if (!ndpPair.first->isActive) {
+                //     break;
+                // }
+                simtime_picosec break_time = 0;
+                if(!ndpPair.first->isActive){
+                    if(eventlist().now() > ndpPair.first->last_active_time){
+                        break_time = eventlist().now() - ndpPair.first->last_active_time;
+                    }
+                    if (ndpPair.first->last_active_time == 0){
+                        break_time = 1e9;
+                    }
+                }
+                // 1e9 is 1ms
+                if (!ndpPair.first->isActive && break_time >= 1e9) {
                     break;
                 }
             }
