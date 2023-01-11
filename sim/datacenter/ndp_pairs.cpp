@@ -371,7 +371,7 @@ NdpLoadGen::run() {
 	if(is_incast == 1){
 		dest = 0;
 	}
-#if 0 
+#if 0
     //look for inactive connection
     NdpPairList& ndpPairs = allNdpPairs[dest];
     NdpPair ndpPair;
@@ -495,6 +495,7 @@ NdpReadTrace::scheduleInput()
     while(flow_input.idx < flow_num && timeFromNs(flow_input.start_time) == eventlist().now()){
             //look for inactive connection
         if(flow_input.message_size > 0 && flow_input.src == src){
+#if 0 
             NdpPairList& ndpPairs = allNdpPairs[flow_input.dst];
             NdpPair ndpPair;
             NdpPairList::iterator it;
@@ -510,6 +511,10 @@ NdpReadTrace::scheduleInput()
             } else {
                 ndpPair = createConnection(flow_input.dst);
             }
+#else
+            NdpPair ndpPair;
+            ndpPair = createConnection(flow_input.dst);
+#endif
             ndpPair.first->reset(flow_input.message_size, true);
         }
         flow_input.idx ++;

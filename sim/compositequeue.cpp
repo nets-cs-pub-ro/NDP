@@ -83,6 +83,13 @@ CompositeQueue::completeService(){
 	_num_nacks++;
     else if (pkt->type() == NDPPULL)
 	_num_pulls++;
+
+	if(pkt->flow_id() == 30889){
+		if(pkt->type() == NDPACK){
+			cout << ((NdpAck*)pkt)->ackno() << " ";
+		}
+		cout << _name << " dequeue " << " "<< eventlist().now()<<" "<< pkt->flow_id() <<" [ " << _enqueued_low.size() << " " << _enqueued_high.size() <<" " << pkt->size()<< " ] Monitor" << endl;
+	}
     else {
 	//cout << "Hdr: type=" << pkt->type() << endl;
 	_num_headers++;
@@ -132,7 +139,7 @@ if (!pkt.header_only() && _num_bounced <4){
 }
 #endif
 
-	if(pkt.flow_id() == 1684730)
+	if(pkt.flow_id() == 30889)
 		cout << _name << " "<< eventlist().now()<<" "<< pkt.flow_id() <<" [ " << _enqueued_low.size() << " " << _enqueued_high.size() <<" " << pkt.size()<< " ] Monitor" << endl;
 
     if (!pkt.header_only()){
