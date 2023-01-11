@@ -10,8 +10,8 @@ map<uint32_t, pair<uint64_t, uint64_t> > sender_tput;
 
 uint64_t NdpSrcPart::inflightMesgs = 0;
 int NdpSrcPart::lastLogTime = 0;
-int NdpLoadGen::initConn = 10;
-//int NdpLoadGen::initConn = 1;
+// int NdpLoadGen::initConn = 10;
+int NdpLoadGen::initConn = 1;
 
 // static int message_generated = 0;
 NdpSrcPart::NdpSrcPart(NdpLogger* logger, TrafficLogger* pktLogger,
@@ -371,6 +371,7 @@ NdpLoadGen::run() {
 	if(is_incast == 1){
 		dest = 0;
 	}
+#if 0 
     //look for inactive connection
     NdpPairList& ndpPairs = allNdpPairs[dest];
     NdpPair ndpPair;
@@ -398,6 +399,10 @@ NdpLoadGen::run() {
     } else {
         ndpPair = createConnection(dest);
     }
+#else
+    NdpPair ndpPair;
+    ndpPair = createConnection(dest);
+#endif
     ndpPair.first->reset(generateMesgSize(), true);
 }
 
