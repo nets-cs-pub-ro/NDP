@@ -65,7 +65,7 @@ NdpSrcPart::doNextEvent() {
 
         started = eventlist().now();
         cout << "Started mesg of size: " << mesgSize << ", from ndp_src: "
-            << str() << " at time: " << timeAsUs(started) <<" us." << endl;
+            << str() << " at time: " << timeAsNs(started) <<" ns " << " flow_id " << nodename() << " "<< flow_id()<< endl;
         //cout << "startflow " << endl;
         startflow();
     }

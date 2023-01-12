@@ -84,7 +84,7 @@ CompositeQueue::completeService(){
     else if (pkt->type() == NDPPULL)
 	_num_pulls++;
 
-	if(pkt->flow_id() == 1684730){
+	if(pkt->flow_id() == 1021208){
 		if(pkt->type() == NDPACK){
 			cout << ((NdpAck*)pkt)->ackno() << " ";
 		}
@@ -139,7 +139,7 @@ if (!pkt.header_only() && _num_bounced <4){
 }
 #endif
 
-	if(pkt.flow_id() == 1684730)
+	if(pkt.flow_id() == 1021208)
 		cout << _name << " "<< eventlist().now()<<" "<< pkt.flow_id() <<" [ " << _enqueued_low.size() << " " << _enqueued_high.size() <<" " << pkt.size()<< " ] Monitor" << endl;
 
     if (!pkt.header_only()){
@@ -220,6 +220,8 @@ if (!pkt.header_only() && _num_bounced <4){
 	    //strip packet the arriving packet - low priority queue is full
 	    cout << _name << " B [ " << _enqueued_low.size() << " " << _enqueued_high.size() <<" " << pkt.size()<<" " << pkt.flow_id() << " ] STRIP" << endl;
 	    pkt.strip_payload();
+		// cout<<" STRIP [ " << pkt.size() << " origion "<<']' << endl;
+
 	    _num_stripped++;
 	    pkt.flow().logTraffic(pkt,*this,TrafficLogger::PKT_TRIM);
 	    if (_logger) _logger->logQueue(*this, QueueLogger::PKT_TRIM, pkt);
@@ -286,6 +288,9 @@ if (!pkt.header_only() && _num_bounced <4){
     _enqueued_high.push_front(&pkt);
     _queuesize_high += pkt.size();
     
+	// if(pkt.type() == NDP && pkt.header_only()){
+	// 	cout<<" CheckSize [ " << pkt.size() << ']' << endl;
+	// }
     //cout << "BH[ " << _enqueued_low.size() << " " << _enqueued_high.size() << " ]" << endl;
     
     if (_serv==QUEUE_INVALID) {

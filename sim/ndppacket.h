@@ -52,6 +52,7 @@ class NdpPacket : public Packet {
 	p->_no_of_paths = no_of_paths;
 	p->_last_packet = last_packet;
 	p->_path_len = route.size();
+    // p->_payload_size = size;
 	return p;
     }
   
@@ -82,6 +83,7 @@ class NdpPacket : public Packet {
 			    // simulation, and this is easiest to
 			    // implement
     bool _last_packet;  // set to true in the last packet in a flow.
+    // int _payload_size;
     static PacketDB<NdpPacket> _packetdb;
 };
 
