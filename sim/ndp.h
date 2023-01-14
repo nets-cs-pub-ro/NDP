@@ -244,8 +244,8 @@ class NdpSink : public PacketSink, public DataReceiver, public Logged {
     uint64_t _total_received;
  
     // Mechanism
-    void send_ack(simtime_picosec ts, NdpPacket::seq_t ackno, NdpPacket::seq_t pacer_no);
-    void send_nack(simtime_picosec ts, NdpPacket::seq_t ackno, NdpPacket::seq_t pacer_no);
+    void send_ack(simtime_picosec ts, NdpPacket::seq_t ackno, NdpPacket::seq_t pacer_no, uint32_t payload_size);
+    void send_nack(simtime_picosec ts, NdpPacket::seq_t ackno, NdpPacket::seq_t pacer_no, uint32_t payload_size);
     void permute_paths();
     
     //Path History
@@ -292,6 +292,7 @@ class NdpPullPacer : public EventSource {
 #endif
     simtime_picosec _last_pull;
     simtime_picosec _packet_drain_time;
+    simtime_picosec _per_byte_drain_time;
     NdpPull::seq_t _pacer_no; // pull sequence number, shared by all connections on this pacer
 
     //pull distribution from real life
