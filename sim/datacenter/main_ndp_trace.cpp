@@ -134,7 +134,7 @@ int main(int argc, char **argv) {
     Packet::set_packet_size(mtu);
 
     new_queue_size = bdp/mtu + 1;
-    cwnd = 1.5*bdp/mtu + 1;
+    cwnd = 1.0*bdp/mtu + 1;
 
     if(new_queue_size != 0){
         queuesize = memFromPkt(new_queue_size);
@@ -291,7 +291,7 @@ int main(int argc, char **argv) {
     for (size_t node = 0; node < no_of_nodes; node++) {
         delete recvrAggrs[node];
     }
-    
+    top->print_q_stats();
     cout << "Simulation completed!" << endl;
     cout << "Done" << endl;
 

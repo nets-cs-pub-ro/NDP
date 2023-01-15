@@ -730,3 +730,22 @@ LeafSpineTopology::print_path(std::ostream& paths, int src,
 
     paths << endl;
 }
+
+void
+LeafSpineTopology::print_q_stats(){
+    for(int i=0 ; i< queues_srvr_tor.size() ; i++){
+        CompositeQueue *q = dynamic_cast<CompositeQueue *>(queues_srvr_tor[i].second);
+        if (q == 0)
+        {
+            cout << (queues_srvr_tor[i].second)->nodename() << endl;
+        }
+        else
+        {
+            cout << q->nodename() << " id= " << q->id << " " << q->num_packets() << " pkts "
+                << q->num_bytes() << " bytes "
+                 << q->num_headers() << " hdrs " << q->num_acks() << " acks " << q->num_nacks() << " nacks " << q->num_stripped() << " stripped "
+                 << q->num_pulls() << " pulls "
+                 << endl;
+        }
+    }
+}

@@ -33,6 +33,7 @@ class CompositeQueue : public Queue {
     int num_acks() const { return _num_acks;}
     int num_nacks() const { return _num_nacks;}
     int num_pulls() const { return _num_pulls;}
+    uint64_t num_bytes() const { return _num_bytes;}
     virtual mem_b queuesize();
     virtual void setName(const string& name) {
 	Logged::setName(name); 
@@ -47,6 +48,7 @@ class CompositeQueue : public Queue {
     int _num_pulls;
     int _num_stripped; // count of packets we stripped
     int _num_bounced;  // count of packets we bounced
+    uint64_t _num_bytes;
 
  protected:
     // Mechanism

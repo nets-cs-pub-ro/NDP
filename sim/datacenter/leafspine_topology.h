@@ -96,6 +96,7 @@ class LeafSpineTopology : public Topology
     void print_path(std::ostream& paths, int src, const Route* route);
     vector<int>* get_neighbours(int src) {return NULL;}
     int no_of_nodes () const {return totalSrvrs;}
+    void print_q_stats();
 
   private:
     void set_params();

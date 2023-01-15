@@ -21,6 +21,7 @@ CompositeQueue::CompositeQueue(linkspeed_bps bitrate, mem_b maxsize, EventList& 
   _num_drops = 0;
   _num_stripped = 0;
   _num_bounced = 0;
+  _num_bytes = 0;
 
   _queuesize_high = _queuesize_low = 0;
   _serv = QUEUE_INVALID;
@@ -72,6 +73,7 @@ CompositeQueue::completeService(){
     _enqueued_low.pop_back();
     _queuesize_low -= pkt->size();
     _num_packets++;
+	_num_bytes += pkt->size();
   } else if (_serv==QUEUE_HIGH) {
     assert(!_enqueued_high.empty());
     pkt = _enqueued_high.back();
