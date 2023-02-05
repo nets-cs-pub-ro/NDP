@@ -133,8 +133,8 @@ LeafSpineTopology::init_network()
                 
                 // add lossless ports to switches if needed
                 auto qPair = queues_srvr_tor.back();
-                qPair.first ->setName("SRV-" + ntoa(srvr_id+tor_id*srvrsPerTor) + "->ToR-" + ntoa(tor_id));
-                qPair.second ->setName("ToR-" + ntoa(tor_id) + "->SRV-" + ntoa(srvr_id+tor_id*srvrsPerTor));
+                qPair.first ->setName("SRV-" + ntoa(srvr_id+tor_id*srvrsPerTor) + "-To-ToR-" + ntoa(tor_id));
+                qPair.second ->setName("ToR-" + ntoa(tor_id) + "-To-SRV-" + ntoa(srvr_id+tor_id*srvrsPerTor));
                 if (qt == LOSSLESS) {
                     tors.back()->addPort(qPair.second);
                     ((LosslessQueue*)(qPair.second))->setRemoteEndpoint(
@@ -172,8 +172,8 @@ LeafSpineTopology::init_network()
                     alloc_queue(qLoggerDwn, 0, (float)aggrspd*1e3, queueSize)));
 
                 auto qPair = queues_tor_aggr.back();
-                qPair.first ->setName("ToR-" + ntoa(tor_id) + "->AGG-" + ntoa(aggr_id));
-                qPair.second->setName("AGG-" + ntoa(aggr_id) + "->ToR-" + ntoa(tor_id));
+                qPair.first ->setName("ToR-" + ntoa(tor_id) + "-To-AGG-" + ntoa(aggr_id));
+                qPair.second->setName("AGG-" + ntoa(aggr_id) + "-To-ToR-" + ntoa(tor_id));
                 if (qt == LOSSLESS) {
                     tors[tor_id+pod_id*torsPerPod]->addPort(qPair.first);
                     ((LosslessQueue*)(qPair.first))->setRemoteEndpoint(

@@ -82,17 +82,20 @@ NdpSrcPart::receivePacket(Packet& pkt){
         //   << ", started at: " << timeAsUs(started) << "us, finished after: " <<
         //   timeAsUs(eventlist().now()-started) << "us." << " experience " <<(pkt.route()->size() -1) << " us"<< endl;
           //total bytes including headers
-          uint64_t total_bytes_per_message = (mesgSize/_mss)*(_mss+ACKSIZE) + (mesgSize%_mss > 0 ? 1: 0)*(mesgSize%_mss + ACKSIZE);
+          uint64_t total_bytes_per_message = mesgSize + ((mesgSize-1) / _mss + 1) * (ACKSIZE);
+          //(mesgSize/_mss)*(_mss+ACKSIZE) + (mesgSize%_mss > 0 ? 1: 0)*(mesgSize%_mss + ACKSIZE);
         //   print_route(*(pkt.route()));
           //nanosecond
           //assume 100Gpbs
           uint32_t ideal_fct = (pkt.route()->size() -1)*1000 + total_bytes_per_message*8.0/(HOST_NIC/1000);
           //nanosecond
         //   cout << "started "<< started << endl;
+          NdpPacket *ndppkt = (NdpPacket*)&pkt;
           uint32_t fct = timeAsNs(eventlist().now() - started);
           float slowdown = timeAsNs(eventlist().now()-started)/ideal_fct;
+          uint32_t nic_fct = timeAsNs(eventlist().now() - ndppkt->ts());
           // sip, dip, sport, dport, size (B), start_time, fct (ns), standalone_fct (ns), qid, appid
-          cout << loadGen->src <<" dip sport dport "<< mesgSize <<" "<< timeAsNs(started) <<" "<< fct <<" "<< ideal_fct<<" "<< timeAsNs(eventlist().now()) <<" " << slowdown <<endl;
+          cout << loadGen->src <<" dip sport dport "<< mesgSize <<" "<< timeAsNs(started) <<" "<< fct <<" "<< ideal_fct<<" "<< timeAsNs(eventlist().now()) <<" " << pkt.flow_id() <<endl;
           sender_tput[loadGen->src] = make_pair(sender_tput[loadGen->src].first + mesgSize, sender_tput[loadGen->src].second) ;
         //   cout.precision(2);
           cout << "yle: node "<< loadGen->src  <<" tput: " <<  sender_tput[loadGen->src].first*8.0 /(timeAsNs(eventlist().now()- sender_tput[loadGen->src].second))<< "Gbps " << endl;
