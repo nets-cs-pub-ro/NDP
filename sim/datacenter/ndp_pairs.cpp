@@ -87,7 +87,15 @@ NdpSrcPart::receivePacket(Packet& pkt){
         //   print_route(*(pkt.route()));
           //nanosecond
           //assume 100Gpbs
-          uint32_t ideal_fct = (pkt.route()->size() -1)*1000 + total_bytes_per_message*8.0/(HOST_NIC/1000);
+          int basertt = 0;
+          if((pkt.route()->size() -1) == 4){
+              basertt = (pkt.route()->size() -1)*1000;
+            //   cout << "pkt.route()->size() " << basertt << endl;
+          }else{
+              basertt = (pkt.route()->size() -1)/2*1000 + (pkt.route()->size() -1)/2*1500;
+            //   cout << "pkt.route()->size()2 " << basertt << endl;
+          }
+          uint32_t ideal_fct = basertt + total_bytes_per_message*8.0/(HOST_NIC/1000);
           //nanosecond
         //   cout << "started "<< started << endl;
           NdpPacket *ndppkt = (NdpPacket*)&pkt;

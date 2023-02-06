@@ -30,8 +30,8 @@ linkrates_t LeafSpineTopology::corespd = linkrates_t::FOURHUNDRED_G;
 // double LeafSpineTopology::delayCoreDwn = 0.25;
 double LeafSpineTopology::delayLeafUp = 1.0;
 double LeafSpineTopology::delayLeafDwn = 1.0;
-double LeafSpineTopology::delaySpineUp = 1.0;
-double LeafSpineTopology::delaySpineDwn = 1.0;
+double LeafSpineTopology::delaySpineUp = 1.5;
+double LeafSpineTopology::delaySpineDwn = 1.5;
 double LeafSpineTopology::delayCoreUp = 1.0;
 double LeafSpineTopology::delayCoreDwn = 1.0;
 
