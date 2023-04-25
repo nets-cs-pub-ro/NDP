@@ -8,6 +8,7 @@
 #include "loggertypes.h"
 #include "queue.h"
 #include "tcp.h"
+#include "cc.h"
 #include "ndp.h"
 #include "mtcp.h"
 #include "qcn.h"
@@ -115,6 +116,14 @@ class NdpSinkLoggerSampling : public SinkLoggerSampling {
     virtual void doNextEvent();
  public:
     NdpSinkLoggerSampling(simtime_picosec period, EventList& eventlist);
+    static string event_to_str(RawLogEvent& event);
+};
+
+
+class CCSinkLoggerSampling : public SinkLoggerSampling {
+    virtual void doNextEvent();
+ public:
+    CCSinkLoggerSampling(simtime_picosec period, EventList& eventlist);
     static string event_to_str(RawLogEvent& event);
 };
 

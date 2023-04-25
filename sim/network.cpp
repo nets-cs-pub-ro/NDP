@@ -143,6 +143,15 @@ Packet::str() const {
     case NDPPULL:
 	s = "NDPPULL";
 	break;
+    case CC:
+	s = "CC";
+	break;
+    case CCACK:
+	s = "CCACK";
+	break;
+    case CCNACK:
+	s = "CCNACK";
+	break;
     case NDPLITE:
 	s = "NDPLITE";
 	break;

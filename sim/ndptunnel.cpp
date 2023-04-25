@@ -102,6 +102,7 @@ void NdpTunnelSrc::set_paths(vector<const Route*>* rt_list){
     int no_of_paths = rt_list->size();
     switch(_route_strategy) {
     case NOT_SET:
+    case PULL_BASED:
     case SINGLE_PATH:
 	// shouldn't call this with these strategies
 	abort();
@@ -175,7 +176,7 @@ void NdpTunnelSrc::processRTS(NdpTunnelPacket& pkt){
 void NdpTunnelSrc::processNack(const NdpNack& nack){
     NdpTunnelPacket* p = NULL;
     
-    bool last_packet = (nack.ackno() + _mss - 1) >= _flow_size;
+    //bool last_packet = (nack.ackno() + _mss - 1) >= _flow_size;
     _sent_times.erase(nack.ackno());
 
     //_flight_size -= _mss;
@@ -226,7 +227,7 @@ void NdpTunnelSrc::processAck(const NdpAck& ack) {
 	_flight_size -= _mss;
     }
     simtime_picosec ts = ack.ts();
-    int32_t path_id = ack.path_id();
+    //int32_t path_id = ack.path_id();
 
     /*
       if (pull)
@@ -414,6 +415,7 @@ const Route* NdpTunnelSrc::choose_route() {
 	    _crt_path = 0;
 	}
 	break;
+    case PULL_BASED:
     case SINGLE_PATH:
 	abort();  //not sure if this can ever happen - if it can, remove this line
 	return _route;
@@ -782,6 +784,7 @@ void NdpTunnelSink::set_paths(vector<const Route*>* rt_list){
 	_crt_path = 0;
 	permute_paths();
 	break;
+    case PULL_BASED:
     case SINGLE_PATH:
     case NOT_SET:
 	abort();

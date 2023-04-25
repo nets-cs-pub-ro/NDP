@@ -160,6 +160,8 @@ int main(int argc, char** argv){
 	TYPE = 2; EV = 201;
     } else if (argc>2&&!strcmp(argv[2], "-ndp")) {
 	TYPE = 18; EV = 1800;
+    } else if (argc>2&&!strcmp(argv[2], "-cc")) {
+	TYPE = 20; EV = 2000;
     } else if (argc>2&&!strcmp(argv[2], "-mptcp")) {
 	TYPE = 12; EV = 1203;
     } else if (argc>2&&!strcmp(argv[2], "-mptcp-cwnd")) {
@@ -209,6 +211,9 @@ int main(int argc, char** argv){
 		break;
 	    case Logger::NDP_TRAFFIC: //10
 		cout << NdpTrafficLogger::event_to_str(event) << endl;
+		break;
+	    case Logger::CC_SINK: //10
+		cout << CCSinkLoggerSampling::event_to_str(event) << endl;
 		break;
 	    case Logger::TCP_SINK: //11
 		cout << TcpSinkLoggerSampling::event_to_str(event) << endl;

@@ -769,7 +769,73 @@ string NdpSinkLoggerSampling::event_to_str(RawLogEvent& event) {
     }
     return ss.str();
 }
-	    
+
+
+
+
+
+
+CCSinkLoggerSampling::CCSinkLoggerSampling(simtime_picosec period, 
+		      EventList& eventlist):
+    SinkLoggerSampling(period, eventlist, Logger::CC_SINK, 0)
+{
+    cout << "CCSinkLoggerSampling(p=" << timeAsSec(period) << " init \n";
+}
+
+void CCSinkLoggerSampling::doNextEvent(){
+    eventlist().sourceIsPendingRel(*this,_period);  
+    simtime_picosec now = eventlist().now();
+    simtime_picosec delta = now - _last_time;
+    _last_time = now;
+    TcpAck::seq_t  deltaB;
+    uint32_t deltaSnd = 0;
+    double rate;
+
+    for (uint64_t i = 0; i<_sinks.size(); i++){
+	CCSink *sink = (CCSink*)_sinks[i];
+	if (_last_seq[i] <= sink->total_received()) {
+	    deltaB = sink->total_received() - _last_seq[i];
+	    if (delta > 0)
+		rate = deltaB * 1000000000000.0 / delta;//Bps
+	    else 
+		rate = 0;
+
+	    _logfile->writeRecord(_sink_type, sink->get_id(),
+				  _event_type, sink->total_received(), 
+				  sink->get_cwnd(), rate);
+
+	    _last_rate[i] = rate;
+	}
+	_last_seq[i] = sink->total_received();
+    }
+}
+
+string CCSinkLoggerSampling::event_to_str(RawLogEvent& event) {
+    stringstream ss;
+    ss << fixed << setprecision(9) << event._time;
+    switch(event._type) {
+    case Logger::CC_SINK:
+	assert(event._ev == 0);
+	ss << " Type CC_SINK ID " << event._id << " Ev RATE"
+	   << " CAck " << (uint64_t)event._val1 << " CWND " << (uint64_t)event._val2 << " Rate " << (uint64_t)event._val3;
+	// val2 seems to always be zero - maybe a bug
+	break;
+    default:
+	ss << "Unknown event " << event._type;
+    }
+    return ss.str();
+}
+
+
+
+
+
+
+
+
+
+
+
 void QcnLoggerSimple::logQcn(QcnReactor &src, QcnEvent ev, double var3) {
     if (ev!=QcnLogger::QCN_SEND)
 	_logfile->writeRecord(Logger::QCN_EVENT,src.id,ev,
