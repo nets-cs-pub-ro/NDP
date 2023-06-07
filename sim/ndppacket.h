@@ -34,6 +34,7 @@ class NdpPacket : public Packet {
 	p->_retransmitted = retransmitted;
 	p->_last_packet = last_packet;
 	p->_path_len = 0;
+    p->_payload_size = size;
 	return p;
     }
   
@@ -52,6 +53,7 @@ class NdpPacket : public Packet {
 	p->_no_of_paths = no_of_paths;
 	p->_last_packet = last_packet;
 	p->_path_len = route.size();
+    p->_payload_size = size;
 	return p;
     }
   
@@ -70,6 +72,7 @@ class NdpPacket : public Packet {
     inline void set_ts(simtime_picosec ts) {_ts = ts;}
     inline int32_t path_id() const {return _route->path_id();}
     inline int32_t no_of_paths() const {return _no_of_paths;}
+    inline int32_t payload_size() const {return _payload_size;}
 
  protected:
     seq_t _seqno;
@@ -82,6 +85,7 @@ class NdpPacket : public Packet {
 			    // simulation, and this is easiest to
 			    // implement
     bool _last_packet;  // set to true in the last packet in a flow.
+    int32_t _payload_size;
     static PacketDB<NdpPacket> _packetdb;
 };
 
@@ -91,7 +95,7 @@ class NdpAck : public Packet {
   
     inline static NdpAck* newpkt(PacketFlow &flow, const Route &route, 
 				 seq_t pacerno, seq_t ackno, seq_t cumulative_ack,
-				 seq_t pullno, int32_t path_id) {
+				 seq_t pullno, int32_t path_id, int32_t payload_size) {
 	NdpAck* p = _packetdb.allocPacket();
 	p->set_route(flow,route,ACKSIZE,ackno);
 	p->_type = NDPACK;
@@ -104,6 +108,7 @@ class NdpAck : public Packet {
 	p->_pullno = pullno;
 	p->_path_id = path_id;
 	p->_path_len = 0;
+    p->_payload_size = payload_size;
 	return p;
     }
   
@@ -118,7 +123,8 @@ class NdpAck : public Packet {
     inline seq_t pullno() const {return _pullno;}
     int32_t  path_id() const {return _path_id;}
     inline void dont_pull() {_pull = false; _pullno = 0;}
-  
+    inline int32_t payload_size() const {return _payload_size;}
+
     virtual ~NdpAck(){}
 
  protected:
@@ -129,6 +135,7 @@ class NdpAck : public Packet {
     bool _pull;
     seq_t _pullno;
     int32_t _path_id; //see comment in NdpPull
+    int32_t _payload_size;
     static PacketDB<NdpAck> _packetdb;
 };
 
@@ -139,7 +146,7 @@ class NdpNack : public Packet {
   
     inline static NdpNack* newpkt(PacketFlow &flow, const Route &route, 
 				  seq_t pacerno, seq_t ackno, seq_t cumulative_ack,
-				  seq_t pullno, int32_t path_id) {
+				  seq_t pullno, int32_t path_id, uint32_t payload_size) {
 	NdpNack* p = _packetdb.allocPacket();
 	p->set_route(flow,route,ACKSIZE,ackno);
 	p->_type = NDPNACK;
@@ -153,6 +160,7 @@ class NdpNack : public Packet {
 	p->_path_id = path_id; // used to indicate which path the data
 	                       // packet was trimmed on
 	p->_path_len = 0;
+    p->_payload_size = payload_size;
 	return p;
     }
   
@@ -167,7 +175,8 @@ class NdpNack : public Packet {
     inline seq_t pullno() const {return _pullno;}
     int32_t path_id() const {return _path_id;}
     inline void dont_pull() {_pull = false; _pullno = 0;}
-  
+    inline int32_t payload_size() const {return _payload_size;}
+
     virtual ~NdpNack(){}
 
  protected:
@@ -178,6 +187,7 @@ class NdpNack : public Packet {
     bool _pull;
     seq_t _pullno;
     int32_t _path_id;
+    int32_t _payload_size;
     static PacketDB<NdpNack> _packetdb;
 };
 
@@ -197,6 +207,7 @@ class NdpPull : public Packet {
 	p->_cumulative_ack = ack->cumulative_ack();
 	p->_pullno = ack->pullno();
 	p->_path_len = 0;
+    p->_payload_size = ack->payload_size();
 	return p;
     }
   
@@ -214,6 +225,7 @@ class NdpPull : public Packet {
 	p->_cumulative_ack = nack->cumulative_ack();
 	p->_pullno = nack->pullno();
 	p->_path_len = 0;
+    p->_payload_size = nack->payload_size();
 	return p;
     }
   
@@ -224,7 +236,8 @@ class NdpPull : public Packet {
     inline seq_t cumulative_ack() const {return _cumulative_ack;}
     inline seq_t pullno() const {return _pullno;}
     int32_t path_id() const {return _path_id;}
-  
+    inline int32_t payload_size() const {return _payload_size;}
+
     virtual ~NdpPull(){}
 
  protected:
@@ -233,6 +246,7 @@ class NdpPull : public Packet {
     seq_t _cumulative_ack;
     seq_t _pullno;
     int32_t _path_id; // indicates ??
+    int32_t _payload_size;
     static PacketDB<NdpPull> _packetdb;
 };
 

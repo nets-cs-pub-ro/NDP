@@ -22,6 +22,7 @@ typedef signed __int64 sint64_t;
 typedef long long sint64_t;
 #endif
 
+
 // Specify units for simulation time, link speed, buffer capacity
 typedef uint64_t simtime_picosec;
 
@@ -37,6 +38,7 @@ simtime_picosec timeFromNs(double nsecs);
 double timeAsMs(simtime_picosec ps);
 double timeAsUs(simtime_picosec ps);
 double timeAsSec(simtime_picosec ps);
+double timeAsNs(simtime_picosec ps);
 typedef sint64_t mem_b;
 mem_b memFromPkt(double pkts);
 

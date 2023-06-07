@@ -1,13 +1,16 @@
 CC=g++
-CFLAGS="-Wall -g -O"
+CFLAGS= -Wall -g 
 CRT=`pwd`
 INCLUDE= -I/$(CRT)/.. -I$(CRT) 
 #-I$(CRT)/ksp -I$(CRT)/ksp/boost
 LIB=-L.. 
 #-Lksp
 
-all:	htsim_tcp htsim_ndp htsim_dctcp_permutation htsim_ndp_permutation htsim_ndp_random htsim_ndp_permutation_lossless htsim_ndp_permutation_fail htsim_ndp_incast htsim_ndp_incast_shortflows htsim_ndp_incast_collateral htsim_ndp_outcast htsim_ndp_outcast_shortflows htsim_tcp_permutation htsim_tcp_perm_shortflows htsim_ndp_perm_shortflows htsim_tcp_incast_shortflows htsim_dctcp_permutation_lossless htsim_ndp_incast_shortflows_lossless htsim_dctcp_incast_shortflows htsim_dctcp_random_shortflows htsim_dctcp_random_shortflows_lossless htsim_dctcp_perm_shortflows htsim_dctcp_perm_shortflows_lossless htsim_ndp_random_shortflows htsim_ndp_oversubscribed htsim_dctcp_oversubscribed htsim_ndp_in_out htsim_dctcp_incast_collateral htsim_dctcp_incast_collateral_lossless htsim_ndptunnel_permutation htsim_ndptunnel_incast_shortflows
+all:	htsim_tcp htsim_ndp htsim_dctcp_permutation htsim_ndp_permutation htsim_ndp_random htsim_ndp_permutation_lossless htsim_ndp_permutation_fail htsim_ndp_incast htsim_ndp_incast_shortflows htsim_ndp_incast_collateral htsim_ndp_outcast htsim_ndp_outcast_shortflows htsim_tcp_permutation htsim_tcp_perm_shortflows htsim_ndp_perm_shortflows htsim_tcp_incast_shortflows htsim_dctcp_permutation_lossless htsim_ndp_incast_shortflows_lossless htsim_dctcp_incast_shortflows htsim_dctcp_random_shortflows htsim_dctcp_random_shortflows_lossless htsim_dctcp_perm_shortflows htsim_dctcp_perm_shortflows_lossless htsim_ndp_random_shortflows htsim_ndp_oversubscribed htsim_dctcp_oversubscribed htsim_ndp_in_out htsim_dctcp_incast_collateral htsim_dctcp_incast_collateral_lossless htsim_ndptunnel_permutation htsim_ndptunnel_incast_shortflows htsim_ndp_trace
 #htsim_ndp_incast_shortflows_demo
+
+htsim_ndp_trace: main_ndp_trace.o firstfit.o ../libhtsim.a vl2_topology.o fat_tree_topology.o leafspine_topology.o bcube_topology.o connection_matrix.o oversubscribed_fat_tree_topology.o shortflows.o multihomed_fat_tree_topology.o star_topology.o ndp_pairs.o rack_scale_topology.o
+	$(CC) $(CFLAGS) ndp_pairs.o main_ndp_trace.o firstfit.o vl2_topology.o fat_tree_topology.o leafspine_topology.o bcube_topology.o connection_matrix.o oversubscribed_fat_tree_topology.o shortflows.o star_topology.o multihomed_fat_tree_topology.o rack_scale_topology.o $(LIB) -lhtsim -o htsim_ndp_trace
 
 htsim_tcp: main.o firstfit.o ../libhtsim.a vl2_topology.o fat_tree_topology.o bcube_topology.o connection_matrix.o oversubscribed_fat_tree_topology.o shortflows.o multihomed_fat_tree_topology.o star_topology.o
 	$(CC) $(CFLAGS) firstfit.o main.o vl2_topology.o fat_tree_topology.o bcube_topology.o connection_matrix.o oversubscribed_fat_tree_topology.o shortflows.o star_topology.o multihomed_fat_tree_topology.o $(LIB) -lhtsim -o htsim_tcp
@@ -230,7 +233,18 @@ main_dctcp_incast_collateral_lossless.o: main_dctcp_incast_collateral_lossless.c
 
 main_ndp_outcast_shortflows.o: main_ndp_outcast_shortflows.cpp
 	$(CC) $(INCLUDE) $(CFLAGS) -c main_ndp_outcast_shortflows.cpp 
+#yanfang
+main_ndp_trace.o: main_ndp_trace.cpp ndp_pairs.cpp
+	$(CC) $(INCLUDE) $(CFLAGS) -c main_ndp_trace.cpp
 
+ndp_pairs.o: ndp_pairs.cpp ndp_pairs.h topology.h
+	$(CC) $(INCLUDE) $(CFLAGS) -c ndp_pairs.cpp
+
+leafspine_topology.o: leafspine_topology.cpp leafspine_topology.h topology.h
+	$(CC) $(INCLUDE) $(CFLAGS) -c leafspine_topology.cpp
+
+rack_scale_topology.o: rack_scale_topology.cpp rack_scale_topology.h topology.h
+	$(CC) $(INCLUDE) $(CFLAGS) -c rack_scale_topology.cpp
 
 star_topology.o: star_topology.cpp star_topology.h
 	$(CC) $(INCLUDE) $(CFLAGS) -c star_topology.cpp 

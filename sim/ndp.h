@@ -148,9 +148,11 @@ class NdpSrc : public PacketSink, public EventSource {
     static int _rtt_hist[10000000];
     int _node_num;
 
+	//yanfang
+    NdpLogger* _logger;
+    void retransmit_packet();
  private:
     // Housekeeping
-    NdpLogger* _logger;
     TrafficLogger* _pktlogger;
     // Connectivity
     PacketFlow _flow;
@@ -163,7 +165,6 @@ class NdpSrc : public PacketSink, public EventSource {
 
     // Mechanism
     void clear_timer(uint64_t start,uint64_t end);
-    void retransmit_packet();
     void permute_paths();
     void update_rtx_time();
     void process_cumulative_ack(NdpPacket::seq_t cum_ackno);
@@ -198,7 +199,7 @@ class NdpSink : public PacketSink, public DataReceiver, public Logged {
     void increase_window() {_pull_no++;} 
     static void setRouteStrategy(RouteStrategy strat) {_route_strategy = strat;}
 
-    list<NdpAck::seq_t> _received; // list of packets above a hole, that we've received
+    list<pair<NdpAck::seq_t, int > > _received; // list of packets above a hole, that we've received
  
     NdpSrc* _src;
 
@@ -214,6 +215,10 @@ class NdpSink : public PacketSink, public DataReceiver, public Logged {
     vector<uint32_t> _trimmed_path_lens;
 #endif
     static RouteStrategy _route_strategy;
+
+	//yanfang
+	NdpPacket::seq_t _last_packet_seqno; //sequence number of the last
+                                         //packet in the connection (or 0 if not known)
 
  private:
  
@@ -236,13 +241,11 @@ class NdpSink : public PacketSink, public DataReceiver, public Logged {
  
     NdpPullPacer* _pacer;
     NdpPull::seq_t _pull_no; // pull sequence number (local to connection)
-    NdpPacket::seq_t _last_packet_seqno; //sequence number of the last
-                                         //packet in the connection (or 0 if not known)
     uint64_t _total_received;
  
     // Mechanism
-    void send_ack(simtime_picosec ts, NdpPacket::seq_t ackno, NdpPacket::seq_t pacer_no);
-    void send_nack(simtime_picosec ts, NdpPacket::seq_t ackno, NdpPacket::seq_t pacer_no);
+    void send_ack(simtime_picosec ts, NdpPacket::seq_t ackno, NdpPacket::seq_t pacer_no, uint32_t payload_size);
+    void send_nack(simtime_picosec ts, NdpPacket::seq_t ackno, NdpPacket::seq_t pacer_no, uint32_t payload_size);
     void permute_paths();
     
     //Path History
@@ -262,6 +265,7 @@ class NdpSink : public PacketSink, public DataReceiver, public Logged {
 class NdpPullPacer : public EventSource {
  public:
     NdpPullPacer(EventList& ev, double pull_rate_modifier);  
+    NdpPullPacer(EventList& event, double pull_rate_modifier, uint64_t bwMbps);
     NdpPullPacer(EventList& ev, char* fn);  
     // pull_rate_modifier is the multiplier of link speed used when
     // determining pull rate.  Generally 1 for FatTree, probable 2 for BCube
@@ -288,6 +292,7 @@ class NdpPullPacer : public EventSource {
 #endif
     simtime_picosec _last_pull;
     simtime_picosec _packet_drain_time;
+    simtime_picosec _per_byte_drain_time;
     NdpPull::seq_t _pacer_no; // pull sequence number, shared by all connections on this pacer
 
     //pull distribution from real life

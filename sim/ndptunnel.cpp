@@ -910,7 +910,7 @@ void NdpTunnelSink::send_ack(simtime_picosec ts, NdpTunnelPacket::seq_t ackno, N
 	assert(_paths.size() > 0);
 	ack = NdpAck::newpkt(_src->_flow, *(_paths.at(_crt_path)), 0, ackno, 
 			     _cumulative_ack, _pull_no, 
-			     0);
+			     0, 0);
 	if (_route_strategy == SCATTER_RANDOM) {
 	    _crt_path = random()%_paths.size();
 	} else {
@@ -923,7 +923,7 @@ void NdpTunnelSink::send_ack(simtime_picosec ts, NdpTunnelPacket::seq_t ackno, N
 	break;
     case SINGLE_PATH:	
 	ack = NdpAck::newpkt(_src->_flow, *_route, 0, ackno, _cumulative_ack,
-			     _pull_no, 0);
+			     _pull_no, 0, 0);
 	break;
     case NOT_SET:
 	abort();
@@ -945,7 +945,7 @@ void NdpTunnelSink::send_nack(simtime_picosec ts, NdpTunnelPacket::seq_t ackno, 
 	assert(_paths.size() > 0);
 	nack = NdpNack::newpkt(_src->_flow, *(_paths.at(_crt_path)), 0, ackno, 
 			       _cumulative_ack, _pull_no,
-			       0);
+			       0, 0);
 	if (_route_strategy == SCATTER_RANDOM) {
 	    _crt_path = random()%_paths.size();
 	} else {
@@ -957,7 +957,7 @@ void NdpTunnelSink::send_nack(simtime_picosec ts, NdpTunnelPacket::seq_t ackno, 
 	}
 	break;
     case SINGLE_PATH:
-      nack = NdpNack::newpkt(_src->_flow, *_route, 0, ackno, _cumulative_ack,  _pull_no, 0 );
+      nack = NdpNack::newpkt(_src->_flow, *_route, 0, ackno, _cumulative_ack,  _pull_no, 0 , 0);
       break;
     case NOT_SET:
       abort();

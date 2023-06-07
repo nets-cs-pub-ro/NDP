@@ -75,6 +75,7 @@ class PriorityQueue : public Queue {
     virtual void receivePacket(Packet& pkt);
     virtual mem_b queuesize();
     simtime_picosec serviceTime(Packet& pkt);
+    list<Packet*>::iterator nextPacket(list<Packet*> _data_queue, bool update_flow_index);
 
  protected:
     //this is needed for lossless operation!
@@ -87,6 +88,8 @@ class PriorityQueue : public Queue {
     virtual void completeService(); 
     PriorityQueue::queue_priority_t getPriority(Packet& pkt);
     list <Packet*> _queue[Q_NONE];
+    vector <uint32_t> _flow_table;
+    uint32_t _flow_table_index;
     mem_b _queuesize[Q_NONE];
     queue_priority_t _servicing;
     int _state_send;

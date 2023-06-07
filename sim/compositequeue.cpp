@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <sstream>
+#include "ndppacket.h"
 
 CompositeQueue::CompositeQueue(linkspeed_bps bitrate, mem_b maxsize, EventList& eventlist, 
 			       QueueLogger* logger)
@@ -20,11 +21,14 @@ CompositeQueue::CompositeQueue(linkspeed_bps bitrate, mem_b maxsize, EventList& 
   _num_drops = 0;
   _num_stripped = 0;
   _num_bounced = 0;
+  _num_bytes = 0;
 
   _queuesize_high = _queuesize_low = 0;
   _serv = QUEUE_INVALID;
   stringstream ss;
   ss << "compqueue(" << bitrate/1000000 << "Mb/s," << maxsize << "bytes)";
+  cout << "compqueue(" << bitrate/1000000 << "Mb/s," << maxsize << "bytes)" << endl;
+
   _nodename = ss.str();
 }
 
@@ -69,6 +73,7 @@ CompositeQueue::completeService(){
     _enqueued_low.pop_back();
     _queuesize_low -= pkt->size();
     _num_packets++;
+	_num_bytes += pkt->size();
   } else if (_serv==QUEUE_HIGH) {
     assert(!_enqueued_high.empty());
     pkt = _enqueued_high.back();
@@ -80,6 +85,13 @@ CompositeQueue::completeService(){
 	_num_nacks++;
     else if (pkt->type() == NDPPULL)
 	_num_pulls++;
+
+	if(pkt->flow_id() == 1236651){
+		if(pkt->type() == NDPACK){
+			cout << ((NdpAck*)pkt)->ackno() << " ";
+		}
+		cout << _name << " dequeue " << " "<< eventlist().now()<<" "<< pkt->flow_id() <<" [ " << _enqueued_low.size() << " " << _enqueued_high.size() <<" " << pkt->size()<< " ] Monitor" << endl;
+	}
     else {
 	//cout << "Hdr: type=" << pkt->type() << endl;
 	_num_headers++;
@@ -109,14 +121,39 @@ void
 CompositeQueue::receivePacket(Packet& pkt)
 {
     pkt.flow().logTraffic(pkt,*this,TrafficLogger::PKT_ARRIVE);
+//Yanfang: The code below is used to test the RTS
+#if 0
+
+if (!pkt.header_only() && _num_bounced <4){
+	if(pkt.type()==NDP){
+		NdpPacket *ndppkt = (NdpPacket*)&pkt;
+		cout <<pkt.flow_id()  << " " <<ndppkt->seqno() << " ";
+	}
+	pkt.strip_payload();
+	cout << _name << " "<< eventlist().now()<<" "<< pkt.flow_id() <<" [ " << _enqueued_low.size() << " " << _enqueued_high.size() <<" " << pkt.size()<< " ] Monitor" << endl;
+
+	if (pkt.reverse_route()  && pkt.bounced() == false) {
+			pkt.bounce();
+			pkt.sendOn();
+			_num_bounced++;
+	}
+	return;
+}
+#endif
+
+	if(pkt.flow_id() == 1236651)
+		cout << _name << " "<< eventlist().now()<<" "<< pkt.flow_id() <<" [ " << _enqueued_low.size() << " " << _enqueued_high.size() <<" " << pkt.size()<< " ] Monitor" << endl;
+
     if (!pkt.header_only()){
-	if (_queuesize_low+pkt.size() <= _maxsize  || drand()<0.5) {
+//yanfang: hardcode, disable the random drop, 
+//because it assumes that the every packet is the same size
+	if (_queuesize_low+pkt.size() <= _maxsize ){ //|| drand()<0.5
 	    //regular packet; don't drop the arriving packet
 
 	    // we are here because either the queue isn't full or,
 	    // it might be full and we randomly chose an
 	    // enqueued packet to trim
-	    
+#if 0	    
 	    if (_queuesize_low+pkt.size()>_maxsize){
 		// we're going to drop an existing packet from the queue
 		if (_enqueued_low.empty()){
@@ -128,8 +165,7 @@ CompositeQueue::receivePacket(Packet& pkt)
 		Packet* booted_pkt = _enqueued_low.front();
 		_enqueued_low.pop_front();
 		_queuesize_low -= booted_pkt->size();
-
-		//cout << "A [ " << _enqueued_low.size() << " " << _enqueued_high.size() << " ] STRIP" << endl;
+		cout << _name << " A [ " << _enqueued_low.size() << " " << _enqueued_high.size() << " " << pkt.size()<< " ] STRIP" << endl;
 		//cout << "booted_pkt->size(): " << booted_pkt->size();
 		booted_pkt->strip_payload();
 		_num_stripped++;
@@ -168,7 +204,7 @@ CompositeQueue::receivePacket(Packet& pkt)
 		    _queuesize_high += booted_pkt->size();
 		}
 	    }
-	    
+#endif 
 	    assert(_queuesize_low+pkt.size()<= _maxsize);
 	    
 	    _enqueued_low.push_front(&pkt);
@@ -184,8 +220,10 @@ CompositeQueue::receivePacket(Packet& pkt)
 	    return;
 	} else {
 	    //strip packet the arriving packet - low priority queue is full
-	    //cout << "B [ " << _enqueued_low.size() << " " << _enqueued_high.size() << " ] STRIP" << endl;
+	    cout << _name << " B [ " << _enqueued_low.size() << " " << _enqueued_high.size() <<" " << pkt.size()<<" " << pkt.flow_id() << " ] STRIP" << endl;
 	    pkt.strip_payload();
+		// cout<<" STRIP [ " << pkt.size() << " origion "<<']' << endl;
+
 	    _num_stripped++;
 	    pkt.flow().logTraffic(pkt,*this,TrafficLogger::PKT_TRIM);
 	    if (_logger) _logger->logQueue(*this, QueueLogger::PKT_TRIM, pkt);
@@ -196,7 +234,8 @@ CompositeQueue::receivePacket(Packet& pkt)
     if (_queuesize_high+pkt.size() > _maxsize){
 	//drop header
 	cout << "drop!\n";
-	if (pkt.reverse_route()  && pkt.bounced() == false) {
+	// only the data packet can do the RTS
+	if (pkt.reverse_route()  && pkt.bounced() == false && pkt.type() == NDP) {
 	    //return the packet to the sender
 	    if (_logger) _logger->logQueue(*this, QueueLogger::PKT_BOUNCE, pkt);
 	    pkt.flow().logTraffic(pkt,*this,TrafficLogger::PKT_BOUNCE);
@@ -208,8 +247,14 @@ CompositeQueue::receivePacket(Packet& pkt)
 	    printf("nexthop: %d\n", pkt.nexthop());
 #endif
 	    pkt.bounce();
-#if 0
+#if 1
 	    printf("\nRev route:\n");
+		if(pkt.type()==NDP){
+			NdpPacket *ndppkt = (NdpPacket*)&pkt;
+			cout <<pkt.flow_id()  << " " <<ndppkt->seqno() << " ";
+		}
+	    cout << _name <<" B[ " <<pkt.flow_id() << " ] BOUNCE " <<endl;
+		print_route(*(pkt.route()));
 	    print_route(*(pkt.reverse_route()));
 	    printf("nexthop: %d\n", pkt.nexthop());
 #endif
@@ -219,8 +264,15 @@ CompositeQueue::receivePacket(Packet& pkt)
 	} else {
 	    if (_logger) _logger->logQueue(*this, QueueLogger::PKT_DROP, pkt);
 	    pkt.flow().logTraffic(pkt,*this,TrafficLogger::PKT_DROP);
-	    cout << "B[ " << _enqueued_low.size() << " " << _enqueued_high.size() << " ] DROP " 
-	    	 << pkt.flow().id << endl;
+		if(pkt.type()==NDP){
+			NdpPacket *ndppkt = (NdpPacket*)&pkt;
+			cout << " NDP " <<ndppkt->seqno() << " ";
+		}else if(pkt.type()== NDPACK){
+			cout << "NDPACK " <<((NdpAck*)&pkt)->ackno() << " ";
+		}else if(pkt.type()== NDPNACK){
+			cout << "NDPNACK " <<((NdpNack*)&pkt)->ackno() << " ";
+		}
+	    cout << "B[ " << _enqueued_low.size() << " " << _enqueued_high.size() <<" " <<pkt.flow_id()<< " ] DROP " << endl;
 	    pkt.free();
 	    _num_drops++;
 	    return;
@@ -228,12 +280,19 @@ CompositeQueue::receivePacket(Packet& pkt)
     }
     
     
-    //if (pkt.type()==NDP)
-    //  cout << "H " << pkt.flow().str() << endl;
+    // if (pkt.type()==NDP && pkt.flow_id() == 1439 && pkt.bounced()){
+	// 	NdpPacket *ndppkt = (NdpPacket*)&pkt;
+	// 	cout <<pkt.flow_id()  << " " <<ndppkt->seqno() << " ";
+	// 	cout << "H " << pkt.flow().str() <<" " << pkt.flow_id() << " " << _name << endl;
+	// }
+     
     
     _enqueued_high.push_front(&pkt);
     _queuesize_high += pkt.size();
     
+	// if(pkt.type() == NDP && pkt.header_only()){
+	// 	cout<<" CheckSize [ " << pkt.size() << ']' << endl;
+	// }
     //cout << "BH[ " << _enqueued_low.size() << " " << _enqueued_high.size() << " ]" << endl;
     
     if (_serv==QUEUE_INVALID) {

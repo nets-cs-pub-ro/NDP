@@ -1,5 +1,10 @@
 #include "qcn.h"
 
+//#ifndef max
+#define max(a,b) ((a)>(b)?(a):(b))
+//#endif
+
+
 const int QcnPacket::PKTSIZE=1500;
 const int QcnAck::ACK_SIZE=40;
 const double QcnReactor::GAIN = 0.5; // assume Fb has been normalized to [0,1]

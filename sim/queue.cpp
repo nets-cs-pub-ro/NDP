@@ -1,6 +1,8 @@
 // -*- c-basic-offset: 4; tab-width: 8; indent-tabs-mode: t -*-        
 #include <sstream>
 #include <math.h>
+#include <bits/stdc++.h>
+
 #include "queue.h"
 #include "ndppacket.h"
 #include "queue_lossless.h"
@@ -100,6 +102,7 @@ PriorityQueue::PriorityQueue(linkspeed_bps bitrate, mem_b maxsize,
     _queuesize[Q_HI] = 0;
     _servicing = Q_NONE;
     _state_send = LosslessQueue::READY;
+    
 }
 
 PriorityQueue::queue_priority_t 
@@ -191,13 +194,19 @@ PriorityQueue::receivePacket(Packet& pkt)
     queue_priority_t prio = getPriority(pkt);
     pkt.flow().logTraffic(pkt, *this, TrafficLogger::PKT_ARRIVE);
 
+    if (prio == Q_LO){
+        vector<uint32_t>::iterator it = find(_flow_table.begin(), _flow_table.end(), pkt.flow_id());
+        if ( it == _flow_table.end())
+            _flow_table.push_back(pkt.flow_id());
+    }
     /* enqueue the packet */
     bool queueWasEmpty = false;
     if (queuesize() == 0)
 	queueWasEmpty = true;
 
     _queuesize[prio] += pkt.size();
-    _queue[prio].push_front(&pkt);
+    //yanfang
+    _queue[prio].push_back(&pkt);
 
     if (_logger) _logger->logQueue(*this, QueueLogger::PKT_ENQUEUE, pkt);
 
@@ -207,7 +216,32 @@ PriorityQueue::receivePacket(Packet& pkt)
 	beginService();
     }
 }
-
+list<Packet*>::iterator PriorityQueue::nextPacket(list<Packet*> _data_queue, bool update_flow_index){
+    uint32_t temp = _flow_table_index;
+    list<Packet*>::iterator it;
+    bool find = false;
+    uint32_t flow_id;
+    for(int i =0; i< _flow_table.size(); i++){
+        temp = _flow_table_index + i;
+        uint32_t flow_id = _flow_table[temp % _flow_table.size()];
+        for (it = _data_queue.begin(); it != _data_queue.end(); ++it) {
+            if((*it)->flow_id() == flow_id){
+                find = true;
+                break;
+            }
+        }
+        if(find)
+            break;
+    }
+    if(find == false){
+        cout << "we did not find a packet for dequeue." << endl;    
+        assert(0);    
+    }
+    if(update_flow_index){
+        _flow_table_index = ++temp;
+    }
+    return it;
+}
 void
 PriorityQueue::beginService()
 {
@@ -216,7 +250,15 @@ PriorityQueue::beginService()
     /* schedule the next dequeue event */
     for (int prio = Q_HI; prio >= Q_LO; --prio) {
 	if (_queuesize[prio] > 0) {
-	    eventlist().sourceIsPendingRel(*this, drainTime(_queue[prio].back()));
+        if(prio == Q_LO){
+            list<Packet*>::iterator it = nextPacket(_queue[prio], false);
+            Packet* pkt = *it;
+            // cout << _name << " next " << pkt->flow_id() << " size " << pkt->size() << endl;
+            eventlist().sourceIsPendingRel(*this, drainTime(pkt));
+        }else{
+	        eventlist().sourceIsPendingRel(*this, drainTime(_queue[prio].back()));
+        }
+
 	    _servicing = (queue_priority_t)prio;
 	    return;
 	}
@@ -229,12 +271,37 @@ PriorityQueue::completeService()
     /* dequeue the packet */
     assert(!_queue[_servicing].empty());
     assert(_servicing != Q_NONE);
-    Packet* pkt = _queue[_servicing].back();
-    _queue[_servicing].pop_back();
+    Packet* pkt;
+    if(_servicing == Q_LO){
+        list<Packet*>::iterator it = nextPacket(_queue[_servicing], true);
+        pkt = *it;
+        _queue[_servicing].remove(pkt);
+        // NdpPacket *ndppkt = (NdpPacket*)pkt;
+        // cout << "pkt infor " << pkt->flow_id() <<" " << timeAsNs(eventlist().now())  << " " <<pkt->size() << " " << ndppkt->ts()<< endl;
+    }else{
+        // pkt = _queue[_servicing].back();
+        // _queue[_servicing].pop_back();
+        //yanfang
+        pkt = _queue[_servicing].front();
+        _queue[_servicing].pop_front();
+    }
+    // cout << _name <<" "<< id <<" pkt infor " << pkt->flow_id() <<" " << timeAsNs(eventlist().now())  << " " <<pkt->size() << " " << _servicing << endl;
     _queuesize[_servicing] -= pkt->size();
     pkt->flow().logTraffic(*pkt, *this, TrafficLogger::PKT_DEPART);
     if (_logger) _logger->logQueue(*this, QueueLogger::PKT_SERVICE, *pkt);
-
+	
+    if (pkt->type() == NDP){
+        NdpPacket *ndppkt = (NdpPacket*)pkt;
+        bool last_packet = ndppkt->last_packet();
+        
+        if(ndppkt->seqno() == 1 &&  last_packet && ndppkt->retransmitted() == false){ //last_packet && pkt->size()==(1442+ACKSIZE)
+            cout << "reset_ts " << pkt->flow_id() <<" " << timeAsNs(eventlist().now())  << " " <<pkt->size() << " " << ndppkt->ts()<< endl;
+            // print_route(*(ndppkt->route()));
+            // ndppkt->set_ts(eventlist().now());
+            // if(last_packet)
+            //     cout << "reset ts " << pkt->flow_id() <<" " << eventlist().now()  << " " <<pkt->size() << endl;
+        }
+    }
     /* tell the packet to move on to the next pipe */
     pkt->sendOn();
 

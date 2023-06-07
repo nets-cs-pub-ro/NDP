@@ -7,7 +7,7 @@ Pipe::Pipe(simtime_picosec delay, EventList& eventlist)
 : EventSource(eventlist,"pipe"), _delay(delay)
 {
     stringstream ss;
-    ss << "pipe(" << delay/1000000 << "us)";
+    ss << "pipe(" << delay/1000000.0 << "us)";
     _nodename= ss.str();
 }
 
